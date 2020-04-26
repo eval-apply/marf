@@ -46,7 +46,7 @@ volatile unsigned char 	ADC_POT_sel_cnt = 0;
 #define ADC_STAGEADDRESS_Ch_1	0x06
 #define ADC_STAGEADDRESS_Ch_2	0x07
 
-#define PulseStatus printf("Step#; %i \n Mode: %d \n Pulse1: %i \n \n", gSequenceStepNumber_1,gSequencerMode_1, (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) );
+#define PulseStatus printf("Line: %i \n, Step#; %i \n Mode: %d \n Pulse1: %i \n \n", __LINE__, gSequenceStepNumber_1,gSequencerMode_1, (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) );
 
 	
 //Union with flags which allows to update different parts of panel
@@ -145,7 +145,7 @@ volatile uint8_t StartFilter_2	= 0;
 volatile uint8_t gSequenceReadvance_1 = 0;
 volatile uint8_t gSequenceReadvance_2 = 0;
 
-#define START_TIMER_SUSTAIN 	40				//1 = 250 uSec, 2 = 500 uSec, 3 = 0.75 mSec, 4 = 1 mSec, etc...
+#define START_TIMER_SUSTAIN 	4			//1 = 250 uSec, 2 = 500 uSec, 3 = 0.75 mSec, 4 = 1 mSec, etc...
 
 //Dip switch state
 volatile uDipConfig gDipConfig;
@@ -590,16 +590,41 @@ void EXTI9_5_IRQHandler()
 
 	if (EXTI->PR & (1<<8)) {	 
 		  
+		PulseStatus;
+
 		if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
 		{
 			gSequencerMode_1 = SEQUENCER_MODE_RUN;
 			//gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 		}
+
+		//Code for firing pulses on step after Enabled step (Enable Mode). If signal is high, set sequencer mode to run, increment step counter, and fire pulses if set.  SB 4/24/20
 		if(gSequencerMode_1 == SEQUENCER_MODE_WAIT_HI_Z)
 		{
 			InitStart_1_SignalTimer();
-		}
+			gSequencerMode_1 = SEQUENCER_MODE_RUN;
+			gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+
+			PULSE_LED_I_ALL_ON;
+			if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+				PULSE_LED_I_1_ON;
+			};
+			if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+				PULSE_LED_I_2_ON;
+			};
+
+			TIM_Cmd(TIM14, ENABLE);
+			TIM_SetCounter(TIM14, 0x00);
+}
 		
+		if(gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
+				{
+					//InitStart_1_SignalTimer();
+					PulseStatus;
+					//gSequencerMode_1 = SEQUENCER_MODE_STAY_HI_Z;
+
+		}
+
 		EXTI_ClearITPendingBit(EXTI_Line8);
 	};
 	 
@@ -615,6 +640,21 @@ void EXTI9_5_IRQHandler()
 		if(gSequencerMode_2 == SEQUENCER_MODE_WAIT_HI_Z)
 		{
 			InitStart_2_SignalTimer();
+			PulseStatus;
+						gSequencerMode_2 = SEQUENCER_MODE_RUN;
+						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+						PulseStatus;
+
+						PULSE_LED_II_ALL_ON;
+						if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
+							PULSE_LED_II_1_ON;
+						};
+						if (Steps[0][gSequenceStepNumber_2].b.OutputPulse2) {
+							PULSE_LED_II_2_ON;
+						};
+
+						TIM_Cmd(TIM8, ENABLE);
+						TIM_SetCounter(TIM8, 0x00);
 		}
 		
 		EXTI_ClearITPendingBit(EXTI_Line6);
@@ -1004,8 +1044,9 @@ void TIM4_IRQHandler()
 			};
 				
 			if((Steps[0][gSequenceStepNumber_1].b.OpModeSUSTAIN))  {
-				if( (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 1)) 
+				if( (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 256))
 				{
+					PulseStatus;
 					if(gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
 					{	
 						gPrevSequencerMode_1 = gSequencerMode_1;
