@@ -2667,8 +2667,8 @@ void UpdateStepSection(void)
 
 
 void Calibration(void)
-{
-	unsigned long i=0;
+{	//printf("%d \n ",__LINE__);
+	unsigned int i=0;
 	uButtons myButtons;
 	uLeds mLeds;	
 	//volatile unsigned long long int key_state;
@@ -2683,6 +2683,7 @@ void Calibration(void)
 	
 	while(myButtons.b.StageAddress2Advance)
 	{
+		//printf("(myButtons %d \n ",__LINE__);
 		//Run/Wait/Stop leds blinking
 		i++;
 		if(i < 2000)
@@ -2719,19 +2720,28 @@ void Calibration(void)
 		myButtons.value = GetButton();
 	}
 	//Measure external inputs
-	for(i = 0; i < 8; i++)
+	//printf("Measure %d \n ",__LINE__);
+
+	for(i = 0; i < 8 ; i++)
 	{
 		CalConstants[i] = AddData[i];
 		if(CalConstants[i] < 100) CalConstants[i] = 4095;
-	}
+		printf ("\n CalConstants[%d] %d \n", i,CalConstants[i]);
+
+	};
 	ADCPause();
+	//printf("ADCPause %d \n ",__LINE__);
 	//Store calibration consstants
 	CAT25512_write_block(100*sizeof(Steps), (unsigned char *) CalConstants, sizeof(CalConstants));
 	mADC_init();
+	return;
+	//printf("mADC_init %d \n ",__LINE__);
+
 	while(!myButtons.b.StageAddress2Advance)
 	{
-				i++;
-		if(i < 2000)
+		//printf("!myButtons %d \n ",__LINE__);
+		i++;
+		if(i < 1000)
 		{
 			mLeds.b.Seq1Run = 1;
 			mLeds.b.Seq1Wait = 1;
@@ -2740,7 +2750,7 @@ void Calibration(void)
 			mLeds.b.Seq2Wait = 1;
 			mLeds.b.Seq2Stop = 0;
 		}
-		else if(i < 4000)
+		else if(i < 2000)
 		{
 			mLeds.b.Seq1Run = 0;
 			mLeds.b.Seq1Wait = 1;
@@ -2749,7 +2759,7 @@ void Calibration(void)
 			mLeds.b.Seq2Wait = 1;
 			mLeds.b.Seq2Stop = 1;
 		}
-		else if(i < 6000)
+		else if(i < 3000)
 		{
 			mLeds.b.Seq1Run = 1;
 			mLeds.b.Seq1Wait = 0;
@@ -2762,6 +2772,7 @@ void Calibration(void)
 		LEDS_modes_SendStruct(&mLeds);
 		myButtons.value = GetButton();
 	}
+
 }
 
 	RCC_ClocksTypeDef RCC_Clocks;
@@ -2853,7 +2864,7 @@ int main(void)
 	key_state = GetButton();
 	myButtons.value = key_state;
 	
-	if(!myButtons.b.StageAddress1Advance) 
+	if(!myButtons.b.StageAddress1Advance)
 	{
 		//if advance switch is pressed start calibration
 		Calibration();
