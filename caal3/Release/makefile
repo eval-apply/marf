@@ -31,8 +31,8 @@ default.size.stdout \
 OBJDUMP_LIST += \
 caal3.list \
 
-OBJCOPY_BIN += \
-caal3.bin \
+OBJCOPY_HEX += \
+caal3.hex \
 
 
 # All Target
@@ -54,8 +54,8 @@ caal3.list: $(EXECUTABLES)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-caal3.bin: $(EXECUTABLES)
-	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "caal3.bin"
+caal3.hex: $(EXECUTABLES)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "caal3.hex"
 	@echo 'Finished building: $@'
 	@echo ' '
 
@@ -64,7 +64,7 @@ clean:
 	-$(RM) *
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_BIN)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX)
 
 .PHONY: all clean dependents
 .SECONDARY:

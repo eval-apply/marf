@@ -46,7 +46,7 @@ volatile unsigned char 	ADC_POT_sel_cnt = 0;
 #define ADC_STAGEADDRESS_Ch_1	0x06
 #define ADC_STAGEADDRESS_Ch_2	0x07
 
-#define PulseStatus printf("Line: %i \n, Step#; %i \n Mode: %d \n Pulse1: %i \n \n", __LINE__, gSequenceStepNumber_1,gSequencerMode_1, (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) );
+#define PulseStatus printf("Line: %i \n Step#; %i \n Mode: %d \n  PrevMode: %d \n Pulse1: %i \n \n", __LINE__, gSequenceStepNumber_1,gSequencerMode_1,gPrevSequencerMode_1, (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) );
 
 	
 //Union with flags which allows to update different parts of panel
@@ -145,7 +145,7 @@ volatile uint8_t StartFilter_2	= 0;
 volatile uint8_t gSequenceReadvance_1 = 0;
 volatile uint8_t gSequenceReadvance_2 = 0;
 
-#define START_TIMER_SUSTAIN 	4			//1 = 250 uSec, 2 = 500 uSec, 3 = 0.75 mSec, 4 = 1 mSec, etc...
+#define START_TIMER_SUSTAIN 	1			//1 = 250 uSec, 2 = 500 uSec, 3 = 0.75 mSec, 4 = 1 mSec, etc...
 
 //Dip switch state
 volatile uDipConfig gDipConfig;
@@ -589,13 +589,25 @@ void EXTI9_5_IRQHandler()
 //printf("StartPulse \n");
 
 	if (EXTI->PR & (1<<8)) {	 
-		  
+		gPrevSequencerMode_1 = gSequencerMode_1;
 		PulseStatus;
+
 
 		if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
 		{
 			gSequencerMode_1 = SEQUENCER_MODE_RUN;
-			//gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+			gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+
+			PULSE_LED_I_ALL_ON;
+						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+							PULSE_LED_I_1_ON;
+						};
+						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+							PULSE_LED_I_2_ON;
+						};
+
+						TIM_Cmd(TIM14, ENABLE);
+						TIM_SetCounter(TIM14, 0x00);
 		}
 
 		//Code for firing pulses on step after Enabled step (Enable Mode). If signal is high, set sequencer mode to run, increment step counter, and fire pulses if set.  SB 4/24/20
@@ -617,13 +629,10 @@ void EXTI9_5_IRQHandler()
 			TIM_SetCounter(TIM14, 0x00);
 }
 		
-		if(gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
-				{
-					//InitStart_1_SignalTimer();
-					PulseStatus;
-					//gSequencerMode_1 = SEQUENCER_MODE_STAY_HI_Z;
-
-		}
+			if (gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
+			{
+				InitStart_1_SignalTimer();
+			};
 
 		EXTI_ClearITPendingBit(EXTI_Line8);
 	};
@@ -635,15 +644,26 @@ void EXTI9_5_IRQHandler()
 		 if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
 		{
 			gSequencerMode_2 = SEQUENCER_MODE_RUN;
-			//gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+			gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+
+			PULSE_LED_II_ALL_ON;
+									if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
+										PULSE_LED_II_1_ON;
+									};
+									if (Steps[0][gSequenceStepNumber_2].b.OutputPulse2) {
+										PULSE_LED_II_2_ON;
+									};
+
+									TIM_Cmd(TIM8, ENABLE);
+									TIM_SetCounter(TIM8, 0x00);
 		}
 		if(gSequencerMode_2 == SEQUENCER_MODE_WAIT_HI_Z)
 		{
 			InitStart_2_SignalTimer();
-			PulseStatus;
+			//PulseStatus;
 						gSequencerMode_2 = SEQUENCER_MODE_RUN;
 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-						PulseStatus;
+						//PulseStatus;
 
 						PULSE_LED_II_ALL_ON;
 						if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
@@ -657,6 +677,11 @@ void EXTI9_5_IRQHandler()
 						TIM_SetCounter(TIM8, 0x00);
 		}
 		
+		if(gSequencerMode_2 == SEQUENCER_MODE_STAY_HI_Z)
+						{
+							InitStart_1_SignalTimer();
+						}
+
 		EXTI_ClearITPendingBit(EXTI_Line6);
 	 };
 	 
@@ -977,6 +1002,7 @@ void TIM4_IRQHandler()
 					
 					
 		/* Calculate prescaler/multiplier*/
+
 		TIM4->PSC = (uint16_t) ((((((float) AddData[ADC_TIMEMULTIPLY_Ch_1])*3.5f)/CalConstants[ADC_TIMEMULTIPLY_Ch_1])+0.5f)*STEP_TIMER_PRESCALER);
 		
 
@@ -1039,21 +1065,16 @@ void TIM4_IRQHandler()
 				{	
 					gPrevSequencerMode_1 = gSequencerMode_1;
 					gSequencerMode_1 = SEQUENCER_MODE_WAIT_HI_Z;
-				}
-				}
+				};
+				};
+
 			};
-				
-			if((Steps[0][gSequenceStepNumber_1].b.OpModeSUSTAIN))  {
-				if( (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 256))
+			if ( (Steps[0][gSequenceStepNumber_1].b.OpModeSUSTAIN)) {
+				if( (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 1))
 				{
-					PulseStatus;
-					if(gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
-					{	
-						gPrevSequencerMode_1 = gSequencerMode_1;
-						gSequencerMode_1 = SEQUENCER_MODE_STAY_HI_Z;
-						InitStart_1_SignalTimer();
-				}
-				}	
+					gPrevSequencerMode_1 = gSequencerMode_1;
+					gSequencerMode_1 = SEQUENCER_MODE_STAY_HI_Z;
+				};
 			};
 							
 			if ( (!(Steps[0][gSequenceStepNumber_1].b.OpModeSTOP)) &&
@@ -1071,7 +1092,7 @@ void TIM4_IRQHandler()
 				gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 
 				//printf("RUN \n");
-				PulseStatus;
+				//PulseStatus;
 				PULSE_LED_I_ALL_ON;
 				
 				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
@@ -1087,9 +1108,9 @@ void TIM4_IRQHandler()
 
 		if (gSequencerMode_1 == SEQUENCER_MODE_STOP) {
 
-gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+			//gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 				//printf("STOP \n");
-				PulseStatus;
+				//PulseStatus;
 						PULSE_LED_I_ALL_ON;
 
 						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
@@ -1110,20 +1131,20 @@ gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 			gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 
 						//printf("ADVANCE \n");
-						PulseStatus;
+						//PulseStatus;
 
-								PULSE_LED_I_ALL_ON;
+						PULSE_LED_I_ALL_ON;
 
-								if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
-									PULSE_LED_I_1_ON;
-								};
-								if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
-									PULSE_LED_I_2_ON;
-								};
+						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+							PULSE_LED_I_1_ON;
+						};
+						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+							PULSE_LED_I_2_ON;
+						};
 
-								TIM_Cmd(TIM14, ENABLE);
-								TIM_SetCounter(TIM14, 0x00);
-							};
+						TIM_Cmd(TIM14, ENABLE);
+						TIM_SetCounter(TIM14, 0x00);
+					};
 		};
 	
 	if (gSequencerMode_1 == SEQUENCER_MODE_WAIT) {
@@ -1235,8 +1256,8 @@ void TIM5_IRQHandler()
 					{	
 						gPrevSequencerMode_2 = gSequencerMode_2;
 						gSequencerMode_2 = SEQUENCER_MODE_WAIT_HI_Z;
-					}
-				}
+					};
+				};
 		};
 				
 			if ( (Steps[1][gSequenceStepNumber_2].b.OpModeSUSTAIN)) {
@@ -1276,7 +1297,7 @@ void TIM5_IRQHandler()
 			};
 
 			if (gSequencerMode_2 == SEQUENCER_MODE_STOP) {
-								gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+								//gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
 
 							PULSE_LED_II_ALL_ON;
 
@@ -1456,17 +1477,32 @@ void TIM3_IRQHandler()
 		TIM3->CR1 &= ~TIM_CR1_CEN;
 	}
 	
-	if((gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z) 
+	if((gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
 			&& (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 1))
 	{
+PulseStatus;
+
 
 	}
-	else if((gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z) 
+	else if((gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
 			&& (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 0))
 	{
+		PulseStatus;
+
+
 		gSequencerMode_1 = SEQUENCER_MODE_RUN;
 		gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 		TIM3->CR1 &= ~TIM_CR1_CEN;
+		PULSE_LED_I_ALL_ON;
+					if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+						PULSE_LED_I_1_ON;
+					};
+					if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+						PULSE_LED_I_2_ON;
+					};
+
+					TIM_Cmd(TIM14, ENABLE);
+					TIM_SetCounter(TIM14, 0x00);
 	}
 };
 
@@ -1496,6 +1532,17 @@ void TIM7_IRQHandler()
 		gSequencerMode_2 = SEQUENCER_MODE_RUN;
 		gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
 		TIM7->CR1 &= ~TIM_CR1_CEN;
+		PULSE_LED_II_ALL_ON;
+
+						if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+							PULSE_LED_II_1_ON;
+						};
+						if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+							PULSE_LED_II_2_ON;
+						};
+
+						TIM_Cmd(TIM8, ENABLE);
+						TIM_SetCounter(TIM8, 0x00);
 	}
 };
 
@@ -2671,7 +2718,6 @@ void Calibration(void)
 	unsigned int i=0;
 	uButtons myButtons;
 	uLeds mLeds;	
-	//volatile unsigned long long int key_state;
 	myButtons.value = GetButton();
 	
 	mLeds.value[0]  	= 0xFF;
@@ -2716,7 +2762,6 @@ void Calibration(void)
 		else i = 0;
 		
 		LEDS_modes_SendStruct(&mLeds);
-
 		myButtons.value = GetButton();
 	}
 	//Measure external inputs
@@ -2726,7 +2771,7 @@ void Calibration(void)
 	{
 		CalConstants[i] = AddData[i];
 		if(CalConstants[i] < 100) CalConstants[i] = 4095;
-		printf ("\n CalConstants[%d] %d \n", i,CalConstants[i]);
+		//printf ("\n CalConstants[%d] %d \n", i,CalConstants[i]);
 
 	};
 	ADCPause();
@@ -2734,7 +2779,7 @@ void Calibration(void)
 	//Store calibration consstants
 	CAT25512_write_block(100*sizeof(Steps), (unsigned char *) CalConstants, sizeof(CalConstants));
 	mADC_init();
-	return;
+	return; //Get outta here properly when calibration is completed. Fixes problem where CalConstant[8] wasn't being calculate properly  SB 4/30/20
 	//printf("mADC_init %d \n ",__LINE__);
 
 	while(!myButtons.b.StageAddress2Advance)
@@ -2778,7 +2823,7 @@ void Calibration(void)
 	RCC_ClocksTypeDef RCC_Clocks;
 
 int main(void)
-{
+ {
 	uButtons myButtons;
 	uLeds mLeds;	
 	unsigned char _cnt;
