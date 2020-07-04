@@ -1258,7 +1258,11 @@ void TIM5_IRQHandler()
 				gSequencerMode_2 = SEQUENCER_MODE_STOP;				
 			};
 			
+<<<<<<< Updated upstream
 			if ( (Steps[1][gSequenceStepNumber_2].b.OpModeENABLE))  {
+=======
+			if ( (Steps[1][gSequ7enceStepNumber_2].b.OpModeENABLE))  {
+>>>>>>> Stashed changes
 				if( (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6) == 0)) 
 				{
 					if(gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z)
