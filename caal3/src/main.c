@@ -257,7 +257,6 @@ void ADC_IRQHandler()
 		};
 
 		//If expander is connected calculate additional voltagesH
-		if(Is_Expander_Present())
 		{
 			if (  (ADC_POT_sel_cnt>=40 && (ADC_POT_sel_cnt<=55))) {
 				if ( (Steps[1][ADC_POT_sel_cnt-24].b.WaitVoltageSlider == 1) ) {
@@ -591,34 +590,15 @@ void EXTI9_5_IRQHandler()
 
 	if (EXTI->PR & (1<<8)) {	 
 		gPrevSequencerMode_1 = gSequencerMode_1;
-
+		PulseStatus;
 
 
 		if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
 		{
-			if (Steps[0][gSequenceStepNumber_1].b.CycleLast)
-				{
-					gSequencerMode_1 = SEQUENCER_MODE_RUN;
-					gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-					PULSE_LED_I_ALL_ON;
-					PulseStatus;
-						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
-							PULSE_LED_I_1_ON;
-						};
-						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
-							PULSE_LED_I_2_ON;
-						};
-
-						TIM_Cmd(TIM14, ENABLE);
-						TIM_SetCounter(TIM14, 0x00);
-
-						return;
-				}
-
 			gSequencerMode_1 = SEQUENCER_MODE_RUN;
 			gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+
 			PULSE_LED_I_ALL_ON;
-			PulseStatus;
 						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
 							PULSE_LED_I_1_ON;
 						};
@@ -628,10 +608,6 @@ void EXTI9_5_IRQHandler()
 
 						TIM_Cmd(TIM14, ENABLE);
 						TIM_SetCounter(TIM14, 0x00);
-
-
-
-
 		}
 
 		//Code for firing pulses on step after Enabled step (Enable Mode). If signal is high, set sequencer mode to run, increment step counter, and fire pulses if set.  SB 4/24/20
@@ -664,57 +640,30 @@ void EXTI9_5_IRQHandler()
 	 //2 Section
 	 
 	 if (EXTI->PR & (1<<6)) {
-		 gPrevSequencerMode_2 = gSequencerMode_2;
 		 
 		 if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
 		{
+			gSequencerMode_2 = SEQUENCER_MODE_RUN;
+			gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
 
-			 if (Steps[1][gSequenceStepNumber_2].b.CycleLast)
-										 {
-											 gSequencerMode_2 = SEQUENCER_MODE_RUN;
-											gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-											 PULSE_LED_II_ALL_ON;
-											 PulseStatus;
-											if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
-												PULSE_LED_II_1_ON;
-											};
-											if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
-												PULSE_LED_II_2_ON;
-											};
+			PULSE_LED_II_ALL_ON;
+									if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
+										PULSE_LED_II_1_ON;
+									};
+									if (Steps[0][gSequenceStepNumber_2].b.OutputPulse2) {
+										PULSE_LED_II_2_ON;
+									};
 
-											TIM_Cmd(TIM8, ENABLE);
-											TIM_SetCounter(TIM8, 0x00);
-											return;
-
-										 }
-
-
-
-			 	 	 	gSequencerMode_2 = SEQUENCER_MODE_RUN;
-						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-
-						 PulseStatus;
-						PULSE_LED_II_ALL_ON;
-						if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
-							PULSE_LED_II_1_ON;
-						};
-						if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
-							PULSE_LED_II_2_ON;
-						};
-
-						TIM_Cmd(TIM8, ENABLE);
-						TIM_SetCounter(TIM8, 0x00);
-}
-
-
-
+									TIM_Cmd(TIM8, ENABLE);
+									TIM_SetCounter(TIM8, 0x00);
+		}
 		if(gSequencerMode_2 == SEQUENCER_MODE_WAIT_HI_Z)
 		{
 			InitStart_2_SignalTimer();
-			//PulseStatus;
+			PulseStatus;
 						gSequencerMode_2 = SEQUENCER_MODE_RUN;
 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-						PulseStatus;
+						//PulseStatus;
 
 						PULSE_LED_II_ALL_ON;
 						if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
@@ -730,7 +679,7 @@ void EXTI9_5_IRQHandler()
 		
 		if(gSequencerMode_2 == SEQUENCER_MODE_STAY_HI_Z)
 						{
-							InitStart_1_SignalTimer();
+							InitStart_2_SignalTimer();
 						}
 
 		EXTI_ClearITPendingBit(EXTI_Line6);
@@ -1141,11 +1090,10 @@ void TIM4_IRQHandler()
 
 			if (gSequencerMode_1 == SEQUENCER_MODE_RUN) {
 				gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-
 				//printf("RUN \n");
-				;
+				PulseStatus;
 				PULSE_LED_I_ALL_ON;
-				PulseStatus
+				
 				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
 					PULSE_LED_I_1_ON;
 				};
@@ -1155,31 +1103,39 @@ void TIM4_IRQHandler()
 
 				TIM_Cmd(TIM14, ENABLE);
 				TIM_SetCounter(TIM14, 0x00);
+
+
 			};
 
 		if (gSequencerMode_1 == SEQUENCER_MODE_STOP) {
 
 			//gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-				printf("STOP \n");
-				if (gPrevSequencerMode_1 == gSequencerMode_2)
-					{
+				//printf("STOP \n");
+
+			if(gPrevSequencerMode_1 == SEQUENCER_MODE_RUN)
+			{
+
+			}
+
+			else
+			{
+				PulseStatus;
 						PULSE_LED_I_ALL_ON;
-						PulseStatus;
-							if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
-								PULSE_LED_I_1_ON;
-							};
-							if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
-								PULSE_LED_I_2_ON;
-							};
+
+						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+							PULSE_LED_I_1_ON;
+						};
+						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+							PULSE_LED_I_2_ON;
+						};
 
 
 
 						TIM_Cmd(TIM14, ENABLE);
 						TIM_SetCounter(TIM14, 0x00);
 					};
+		}
 
-
-};
 		if (gSequencerMode_1 == SEQUENCER_MODE_ADVANCE) {
 			gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 
@@ -1350,30 +1306,28 @@ void TIM5_IRQHandler()
 			};
 
 			if (gSequencerMode_2 == SEQUENCER_MODE_STOP) {
+								//gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+				if(gPrevSequencerMode_2 == SEQUENCER_MODE_RUN)
+							{
 
-						//gSequenceStepNumber_2 = GetNextStep(0, gSequenceStepNumber_1);
-							printf("STOP \n");
-							if (gPrevSequencerMode_2 == gSequencerMode_2)
-								{
-									PULSE_LED_II_ALL_ON;
-									PulseStatus;
-										if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
-											PULSE_LED_II_1_ON;
-										};
-										if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
-											PULSE_LED_II_2_ON;
-										};
+							}
 
+							else
+							{
+							PULSE_LED_II_ALL_ON;
 
+							if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+								PULSE_LED_II_1_ON;
+							};
+							if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+								PULSE_LED_II_2_ON;
+							};
 
-									TIM_Cmd(TIM8, ENABLE);
-									TIM_SetCounter(TIM8, 0x00);
-								}
-
-
-			}
+							TIM_Cmd(TIM8, ENABLE);
+							TIM_SetCounter(TIM8, 0x00);
+			};
 		};
-	
+		}
 
 	if (gSequencerMode_2 == SEQUENCER_MODE_WAIT) {
 		if(gSequenceStepNumber_2 != (unsigned int)(pots_step[1]-1))
