@@ -1,0 +1,7 @@
+adc_pots_selector.c:109:6:ADC_POTS_selector_init	16	static
+adc_pots_selector.c:126:6:ADC_POTS_selector_SendByte	8	static,ignoring_inline_asm
+adc_pots_selector.c:152:6:ADC_POTS_selector_SendHalfByte	8	static,ignoring_inline_asm
+adc_pots_selector.c:180:6:ADC_POTS_selector_SendDWord	16	static
+adc_pots_selector.c:196:6:ADC_POTS_selector_Ch	0	static
+adc_pots_selector.c:202:15:ADC_inc	24	static,ignoring_inline_asm
+adc_pots_selector.c:240:15:ADC_inc_expanded	16	static,ignoring_inline_asm
