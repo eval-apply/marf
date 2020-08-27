@@ -509,7 +509,7 @@ void EXTI0_IRQHandler()
 	if ((GPIOB->IDR & GPIO_IDR_IDR_0) &&
 		(gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
 	) {
-		printf("Stop Pulse\n");
+		//printf("Stop Pulse 1 \n");
 		gPrevSequencerMode_1 = SEQUENCER_MODE_RUN;
 		gSequencerMode_1 = SEQUENCER_MODE_STOP;	
 		
@@ -572,12 +572,13 @@ void InitClear_Timer()
 void EXTI1_IRQHandler()
 {
 	//if we are not in wait condition then stop the sequenser
-	if ( !(GPIOB->IDR & GPIO_IDR_IDR_1)  && 
+	if ((GPIOB->IDR & GPIO_IDR_IDR_1)  &&
 		(gSequencerMode_2 != SEQUENCER_MODE_WAIT && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z)
 	) {
 		gPrevSequencerMode_2 = SEQUENCER_MODE_RUN;
 		gSequencerMode_2 = SEQUENCER_MODE_STOP;	
-		
+		printf("Stop Pulse 2 \n");
+
 		//Update both
 		DisplayUpdateFlags.b.MainDisplay = 1;
 		DisplayUpdateFlags.b.StepsDisplay = 1;
@@ -601,8 +602,7 @@ void EXTI9_5_IRQHandler()
 		if ((GPIOB->IDR & GPIO_IDR_IDR_0) && (EXTI->PR & (1<<8))){
 						gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
 						gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-						DisplayUpdateFlags.b.MainDisplay 	= 1;
-							DisplayUpdateFlags.b.StepsDisplay = 1;
+
 						//EXTI_ClearITPendingBit(EXTI_Line0);
 						//EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt
 						//return;
@@ -616,6 +616,8 @@ void EXTI9_5_IRQHandler()
 
 									TIM_Cmd(TIM14, ENABLE);
 									TIM_SetCounter(TIM14, 0x00);
+									DisplayUpdateFlags.b.MainDisplay 	= 1;
+									DisplayUpdateFlags.b.StepsDisplay = 1;
 
 					}
 
@@ -666,7 +668,25 @@ void EXTI9_5_IRQHandler()
 	 
 	 if (EXTI->PR & (1<<6)) {
 		 
-		 if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
+		 if ((GPIOB->IDR & GPIO_IDR_IDR_1) && (EXTI->PR & (1<<6))){
+		 						gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
+		 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+		 						DisplayUpdateFlags.b.MainDisplay 	= 1;
+	 							DisplayUpdateFlags.b.StepsDisplay = 1;
+		 						PULSE_LED_II_ALL_ON;
+		 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+		 										PULSE_LED_II_1_ON;
+		 									};
+		 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+		 										PULSE_LED_II_2_ON;
+		 									};
+
+		 									TIM_Cmd(TIM8, ENABLE);
+		 									TIM_SetCounter(TIM8, 0x00);
+
+		 					}
+
+		 else if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
 		{
 			gSequencerMode_2 = SEQUENCER_MODE_RUN;
 			gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
@@ -707,10 +727,10 @@ void EXTI9_5_IRQHandler()
 							InitStart_2_SignalTimer();
 						}
 
-		if(gSequencerMode_2 == SEQUENCER_MODE_STAY_HI_Z)
+		/*if(gSequencerMode_2 == SEQUENCER_MODE_STAY_HI_Z)
 						{
 							InitStart_1_SignalTimer();
-						}
+						}*/
 
 		EXTI_ClearITPendingBit(EXTI_Line6);
 	 };
@@ -1452,10 +1472,10 @@ void mTimersInit(void)
 	
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14, ENABLE);
 	
-	TIM_TimeBaseStructInit(&myTimer);
+	TIM_TimeBaseStructInit(&myTimer);  //Pulse 1 Out timer
 	myTimer.TIM_Prescaler = 210;
 	myTimer.TIM_Period = 320;
-	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
+	myTimer.TIM_ClockDivision = TIM_CKD_DIV2;
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	
 	TIM_TimeBaseInit(TIM14, &myTimer);	
@@ -1468,7 +1488,7 @@ void mTimersInit(void)
 	
 	TIM_TimeBaseStructInit(&myTimer);
 	myTimer.TIM_Prescaler = 210;
-	myTimer.TIM_Period = 640;// Seq2 pulse duration
+	myTimer.TIM_Period = 320;// Seq2 pulse duration
 	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	
