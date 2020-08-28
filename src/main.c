@@ -482,13 +482,13 @@ void mInterruptInit(void)
   NVIC_Init(&NVIC_InitStructure);
 	
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI1_IRQn; 						
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00; 
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority 				= 0x00; 
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; 
   NVIC_Init(&NVIC_InitStructure);
 	
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn; 						
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00; 
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority 				= 0x00; 
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; 
   NVIC_Init(&NVIC_InitStructure);
@@ -577,7 +577,7 @@ void EXTI1_IRQHandler()
 	) {
 		gPrevSequencerMode_2 = SEQUENCER_MODE_RUN;
 		gSequencerMode_2 = SEQUENCER_MODE_STOP;	
-		printf("Stop Pulse 2 \n");
+		//printf("Stop Pulse 2 \n");
 
 		//Update both
 		DisplayUpdateFlags.b.MainDisplay = 1;
@@ -591,6 +591,9 @@ void EXTI1_IRQHandler()
 //1 & 2 SECTION
 void EXTI9_5_IRQHandler()
 {
+printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
+//printf("Interrupt Line 8; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
+
 	//1 Section
 	//1 LH
 
@@ -599,12 +602,13 @@ void EXTI9_5_IRQHandler()
 	if ((EXTI->PR & (1<<8))) {
 		//PulseStatus;
 
-		if ((GPIOB->IDR & GPIO_IDR_IDR_0) && (EXTI->PR & (1<<8))){
-						gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
+		//if ((GPIOB->IDR & GPIO_IDR_IDR_0) && (EXTI->PR & (1<<8))){
+
+			if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)){
+			gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
 						gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 
-						//EXTI_ClearITPendingBit(EXTI_Line0);
-						//EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt
+
 						//return;
 						PULSE_LED_I_ALL_ON;
 									if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
@@ -618,6 +622,8 @@ void EXTI9_5_IRQHandler()
 									TIM_SetCounter(TIM14, 0x00);
 									DisplayUpdateFlags.b.MainDisplay 	= 1;
 									DisplayUpdateFlags.b.StepsDisplay = 1;
+									//EXTI_ClearITPendingBit(EXTI_Line0);
+									//EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt
 
 					}
 
@@ -668,11 +674,14 @@ void EXTI9_5_IRQHandler()
 	 
 	 if (EXTI->PR & (1<<6)) {
 		 
-		 if ((GPIOB->IDR & GPIO_IDR_IDR_1) && (EXTI->PR & (1<<6))){
+		 printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));
+		 //printf("Interrupt Line 8; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5));
+		// if ((!(GPIOB->IDR & GPIO_IDR_IDR_1)) && (EXTI->PR & (1<<6))){
+
+		 if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6))){
 		 						gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
 		 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-		 						DisplayUpdateFlags.b.MainDisplay 	= 1;
-	 							DisplayUpdateFlags.b.StepsDisplay = 1;
+								//printf("Both 2\n");
 		 						PULSE_LED_II_ALL_ON;
 		 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
 		 										PULSE_LED_II_1_ON;
@@ -683,6 +692,8 @@ void EXTI9_5_IRQHandler()
 
 		 									TIM_Cmd(TIM8, ENABLE);
 		 									TIM_SetCounter(TIM8, 0x00);
+		 									DisplayUpdateFlags.b.MainDisplay 	= 1;
+		 									DisplayUpdateFlags.b.StepsDisplay = 1;
 
 		 					}
 
@@ -1474,8 +1485,8 @@ void mTimersInit(void)
 	
 	TIM_TimeBaseStructInit(&myTimer);  //Pulse 1 Out timer
 	myTimer.TIM_Prescaler = 210;
-	myTimer.TIM_Period = 320;
-	myTimer.TIM_ClockDivision = TIM_CKD_DIV2;
+	myTimer.TIM_Period = 1800;
+	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	
 	TIM_TimeBaseInit(TIM14, &myTimer);	
@@ -1488,7 +1499,7 @@ void mTimersInit(void)
 	
 	TIM_TimeBaseStructInit(&myTimer);
 	myTimer.TIM_Prescaler = 210;
-	myTimer.TIM_Period = 320;// Seq2 pulse duration
+	myTimer.TIM_Period = 3600;// Seq2 pulse duration
 	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	
