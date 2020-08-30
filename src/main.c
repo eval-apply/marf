@@ -184,6 +184,8 @@ unsigned char rev;
 #define POT_TYPE_TIME 101
 #define POT_TYPE_OTHER 102
 
+
+volatile uint16_t foo;
 unsigned char GetNextStep(unsigned char _Section, unsigned char _StepNum);
 	
 //Current patches bank
@@ -509,7 +511,7 @@ void EXTI0_IRQHandler()
 	if ((GPIOB->IDR & GPIO_IDR_IDR_0) &&
 		(gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
 	) {
-		//printf("Stop Pulse 1 \n");
+		printf("Stop Pulse 1 \n");
 		gPrevSequencerMode_1 = SEQUENCER_MODE_RUN;
 		gSequencerMode_1 = SEQUENCER_MODE_STOP;	
 		
@@ -567,17 +569,63 @@ void InitClear_Timer()
 	TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);
 };
 
+void ExtClockProcessor_1(){
+	gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
+							gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+							//gStepWidth_1=0;
+
+							//return;
+							PULSE_LED_I_ALL_ON;
+										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+											PULSE_LED_I_1_ON;
+										};
+										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+											PULSE_LED_I_2_ON;
+										};
+
+										TIM_Cmd(TIM14, ENABLE);
+										TIM_SetCounter(TIM14, 0x00);
+										DisplayUpdateFlags.b.MainDisplay 	= 1;
+										DisplayUpdateFlags.b.StepsDisplay = 1;
+										EXTI_ClearITPendingBit(EXTI_Line0);
+										EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt
+
+	};
+
+void ExtClockProcessor_2(){
+
+	gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
+			 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+									//printf("Both 2\n");
+			 						PULSE_LED_II_ALL_ON;
+			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+			 										PULSE_LED_II_1_ON;
+			 									};
+			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+			 										PULSE_LED_II_2_ON;
+			 									};
+
+			 									TIM_Cmd(TIM8, ENABLE);
+			 									TIM_SetCounter(TIM8, 0x00);
+			 									DisplayUpdateFlags.b.MainDisplay 	= 1;
+			 									DisplayUpdateFlags.b.StepsDisplay = 1;
+			 									EXTI_ClearITPendingBit(EXTI_Line1);
+												EXTI_ClearITPendingBit(EXTI_Line6);  //Start interrupt
+
+}
+
 //STOP KEY-BANANA Interrupt handler
 //2 SECTION
 void EXTI1_IRQHandler()
 {
 	//if we are not in wait condition then stop the sequenser
-	if ((GPIOB->IDR & GPIO_IDR_IDR_1)  &&
+	if (!(GPIOB->IDR & GPIO_IDR_IDR_1)  &&
 		(gSequencerMode_2 != SEQUENCER_MODE_WAIT && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z)
 	) {
+
 		gPrevSequencerMode_2 = SEQUENCER_MODE_RUN;
 		gSequencerMode_2 = SEQUENCER_MODE_STOP;	
-		//printf("Stop Pulse 2 \n");
+		printf("Stop Pulse 2 \n");
 
 		//Update both
 		DisplayUpdateFlags.b.MainDisplay = 1;
@@ -591,23 +639,25 @@ void EXTI1_IRQHandler()
 //1 & 2 SECTION
 void EXTI9_5_IRQHandler()
 {
-printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
-//printf("Interrupt Line 8; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
+	delay_us(50);
+printf("Stop Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
+printf("Start Interrupt Line 8; %i\n\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
 
 	//1 Section
 	//1 LH
 
-//printf("StartPulse \n");
+printf("StartPulse \n");
 
 	if ((EXTI->PR & (1<<8))) {
 		//PulseStatus;
 
 		//if ((GPIOB->IDR & GPIO_IDR_IDR_0) && (EXTI->PR & (1<<8))){
 
-			if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)){
-			gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
+			if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)))){
+				ExtClockProcessor_1();
+			/*gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
 						gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-
+						gStepWidth_1=0;
 
 						//return;
 						PULSE_LED_I_ALL_ON;
@@ -623,8 +673,8 @@ printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
 									DisplayUpdateFlags.b.MainDisplay 	= 1;
 									DisplayUpdateFlags.b.StepsDisplay = 1;
 									//EXTI_ClearITPendingBit(EXTI_Line0);
-									//EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt
-
+									//EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt*/
+									return;
 					}
 
 		else if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
@@ -674,12 +724,11 @@ printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
 	 
 	 if (EXTI->PR & (1<<6)) {
 		 
-		 printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));
+		 //printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));
 		 //printf("Interrupt Line 8; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5));
 		// if ((!(GPIOB->IDR & GPIO_IDR_IDR_1)) && (EXTI->PR & (1<<6))){
-
-		 if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6))){
-		 						gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
+		 if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6)))){
+		 						/*gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
 		 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
 								//printf("Both 2\n");
 		 						PULSE_LED_II_ALL_ON;
@@ -694,8 +743,10 @@ printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
 		 									TIM_SetCounter(TIM8, 0x00);
 		 									DisplayUpdateFlags.b.MainDisplay 	= 1;
 		 									DisplayUpdateFlags.b.StepsDisplay = 1;
-
-		 					}
+*/
+			 ExtClockProcessor_2();
+			 return;
+		 }
 
 		 else if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
 		{
@@ -747,7 +798,11 @@ printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
 	 };
 	 
 	 //Strobe jack A
-	 	if (EXTI->PR & (1<<5)) {
+
+
+
+
+	 if (EXTI->PR & (1<<5)) {
 		 
 			gSequenceStepNumber_1 = (unsigned int) (pots_step[0]-1);
 			
@@ -2913,6 +2968,8 @@ void Calibration(void){
 	}
 
 }
+
+
 
 	RCC_ClocksTypeDef RCC_Clocks;
 
