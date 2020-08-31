@@ -512,12 +512,15 @@ void mInterruptInit(void)
 	EXTI_ClearITPendingBit(EXTI_Line8);
 };
 
+int EXT_CLK1;
+int EXT_CLK2;
+
 void ExtClockProcessor_1(){
 	gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
 	gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 							//gStepWidth_1=0;
-
-							//return;
+							EXT_CLK1 = 1;
+							printf("ADVANCE1: %i\n", __LINE__);
 							PULSE_LED_I_ALL_ON;
 										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
 											PULSE_LED_I_1_ON;
@@ -539,7 +542,9 @@ void ExtClockProcessor_2(){
 
 									gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
 			 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-									//printf("Both 2\n");
+			 						EXT_CLK2 = 1;
+
+			 						printf("ADVANCE2: %i\n", __LINE__);
 			 						PULSE_LED_II_ALL_ON;
 			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
 			 										PULSE_LED_II_1_ON;
@@ -566,7 +571,7 @@ void EXTI0_IRQHandler()
 	 if ((GPIOB->IDR & GPIO_IDR_IDR_0) &&
 		(gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
 	) {
-		printf("Stop Pulse 1 \n");
+		//printf("Stop Pulse 1 \n");
 		gPrevSequencerMode_1 = SEQUENCER_MODE_RUN;
 		gSequencerMode_1 = SEQUENCER_MODE_STOP;	
 		
@@ -637,7 +642,7 @@ void EXTI1_IRQHandler()
 
 		gPrevSequencerMode_2 = SEQUENCER_MODE_RUN;
 		gSequencerMode_2 = SEQUENCER_MODE_STOP;	
-		printf("Stop Pulse 2 \n");
+		//printf("Stop Pulse 2 \n");
 
 		//Update both
 		DisplayUpdateFlags.b.MainDisplay = 1;
@@ -652,8 +657,8 @@ void EXTI1_IRQHandler()
 void EXTI9_5_IRQHandler()
 {
 		//delay_us(50);
-printf("Stop Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
-printf("Start Interrupt Line 8; %i\n\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
+//printf("Stop Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
+//printf("Start Interrupt Line 8; %i\n\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
 
 	//1 Section
 	//1 LH
@@ -1394,6 +1399,7 @@ void TIM5_IRQHandler()
 			};
 			
 			if (Steps[1][gSequenceStepNumber_2].b.OpModeSTOP) {
+				printf("STOP_Switch: %i\n", __LINE__);
 				gPrevSequencerMode_2 = gSequencerMode_2;
 				gSequencerMode_2 = SEQUENCER_MODE_STOP;				
 			};
@@ -1452,8 +1458,12 @@ void TIM5_IRQHandler()
 
 							}
 
+				else if (EXT_CLK2){
+
+				}
 							else
 							{
+								printf("STOP MODE: %i", __LINE__);
 							PULSE_LED_II_ALL_ON;
 
 							if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
@@ -1562,7 +1572,7 @@ void mTimersInit(void)
 	
 	TIM_TimeBaseStructInit(&myTimer);  //Pulse 1 Out timer
 	myTimer.TIM_Prescaler = 210;
-	myTimer.TIM_Period = 1800;
+	myTimer.TIM_Period = 120;
 	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	
@@ -1576,7 +1586,7 @@ void mTimersInit(void)
 	
 	TIM_TimeBaseStructInit(&myTimer);
 	myTimer.TIM_Prescaler = 210;
-	myTimer.TIM_Period = 3600;// Seq2 pulse duration
+	myTimer.TIM_Period = 640;// Seq2 pulse duration
 	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	
