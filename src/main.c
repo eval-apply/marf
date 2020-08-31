@@ -185,7 +185,16 @@ unsigned char rev;
 #define POT_TYPE_OTHER 102
 
 
-volatile uint16_t foo;
+volatile uint16_t foo0;
+volatile uint16_t foo1;
+volatile uint16_t foo2;
+volatile uint16_t foo3;
+volatile uint16_t foo4;
+volatile uint16_t foo5;
+volatile uint16_t foo6;
+volatile uint16_t foo7;
+volatile uint16_t foo8;
+
 unsigned char GetNextStep(unsigned char _Section, unsigned char _StepNum);
 	
 //Current patches bank
@@ -365,7 +374,7 @@ void mADC_init(void)
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE); 
 		
 	TIM_TimeBaseStructInit(&TimeBaseInit);
-	TimeBaseInit.TIM_Prescaler 			= 1; // prescaler at 1 means scanning ADCs at 10kHz. Set to 0 for 20kHz.
+	TimeBaseInit.TIM_Prescaler 			= 0; // prescaler at 1 means scanning ADCs at 10kHz. Set to 0 for 20kHz.
 	TimeBaseInit.TIM_CounterMode 		= TIM_CounterMode_Up;
   TimeBaseInit.TIM_Period 				= 4200-1;
 	TimeBaseInit.TIM_ClockDivision 	= TIM_CKD_DIV1;	
@@ -503,12 +512,58 @@ void mInterruptInit(void)
 	EXTI_ClearITPendingBit(EXTI_Line8);
 };
 
+void ExtClockProcessor_1(){
+	gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
+	gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+							//gStepWidth_1=0;
+
+							//return;
+							PULSE_LED_I_ALL_ON;
+										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+											PULSE_LED_I_1_ON;
+										};
+										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+											PULSE_LED_I_2_ON;
+										};
+
+										TIM_Cmd(TIM14, ENABLE);
+										TIM_SetCounter(TIM14, 0x00);
+										DisplayUpdateFlags.b.MainDisplay 	= 1;
+										DisplayUpdateFlags.b.StepsDisplay = 1;
+										EXTI_ClearITPendingBit(EXTI_Line0);
+										EXTI_ClearITPendingBit(EXTI_Line5);  //Start interrupt
+
+	};
+
+void ExtClockProcessor_2(){
+
+									gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
+			 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+									//printf("Both 2\n");
+			 						PULSE_LED_II_ALL_ON;
+			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+			 										PULSE_LED_II_1_ON;
+			 									};
+			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+			 										PULSE_LED_II_2_ON;
+			 									};
+
+			 									TIM_Cmd(TIM8, ENABLE);
+			 									TIM_SetCounter(TIM8, 0x00);
+			 									DisplayUpdateFlags.b.MainDisplay 	= 1;
+			 									DisplayUpdateFlags.b.StepsDisplay = 1;
+			 									EXTI_ClearITPendingBit(EXTI_Line1);
+												EXTI_ClearITPendingBit(EXTI_Line7);  //Start interrupt
+
+}
 
 //STOP KEY-BANANA Interrupt handler
 //1 SECTION
 void EXTI0_IRQHandler()
 {
-	if ((GPIOB->IDR & GPIO_IDR_IDR_0) &&
+	//foo0=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
+
+	 if ((GPIOB->IDR & GPIO_IDR_IDR_0) &&
 		(gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
 	) {
 		printf("Stop Pulse 1 \n");
@@ -569,50 +624,7 @@ void InitClear_Timer()
 	TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);
 };
 
-void ExtClockProcessor_1(){
-	gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
-							gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-							//gStepWidth_1=0;
 
-							//return;
-							PULSE_LED_I_ALL_ON;
-										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
-											PULSE_LED_I_1_ON;
-										};
-										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
-											PULSE_LED_I_2_ON;
-										};
-
-										TIM_Cmd(TIM14, ENABLE);
-										TIM_SetCounter(TIM14, 0x00);
-										DisplayUpdateFlags.b.MainDisplay 	= 1;
-										DisplayUpdateFlags.b.StepsDisplay = 1;
-										EXTI_ClearITPendingBit(EXTI_Line0);
-										EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt
-
-	};
-
-void ExtClockProcessor_2(){
-
-	gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
-			 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-									//printf("Both 2\n");
-			 						PULSE_LED_II_ALL_ON;
-			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
-			 										PULSE_LED_II_1_ON;
-			 									};
-			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
-			 										PULSE_LED_II_2_ON;
-			 									};
-
-			 									TIM_Cmd(TIM8, ENABLE);
-			 									TIM_SetCounter(TIM8, 0x00);
-			 									DisplayUpdateFlags.b.MainDisplay 	= 1;
-			 									DisplayUpdateFlags.b.StepsDisplay = 1;
-			 									EXTI_ClearITPendingBit(EXTI_Line1);
-												EXTI_ClearITPendingBit(EXTI_Line6);  //Start interrupt
-
-}
 
 //STOP KEY-BANANA Interrupt handler
 //2 SECTION
@@ -639,7 +651,7 @@ void EXTI1_IRQHandler()
 //1 & 2 SECTION
 void EXTI9_5_IRQHandler()
 {
-	delay_us(50);
+		//delay_us(50);
 printf("Stop Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
 printf("Start Interrupt Line 8; %i\n\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
 
@@ -647,14 +659,28 @@ printf("Start Interrupt Line 8; %i\n\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8
 	//1 LH
 
 printf("StartPulse \n");
-
+			foo0=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0)); 	// SEB 8-31-2020
+  			foo1=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));	// Directly reading GPIO values for Start, Stop, and Strobe jack inputs
+  			foo2=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_2));
+  			foo3=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_3));
+  			foo4=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4));
+  			foo5=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5));
+  			foo6=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6));
+  			foo7=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7));
+  			foo8=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
 	if ((EXTI->PR & (1<<8))) {
 		//PulseStatus;
 
 		//if ((GPIOB->IDR & GPIO_IDR_IDR_0) && (EXTI->PR & (1<<8))){
 
-			if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)))){
+
+
+			/*if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)))){
+							ExtClockProcessor_1();
+						}*/
+		/*if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)))){
 				ExtClockProcessor_1();
+			}*/
 			/*gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
 						gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 						gStepWidth_1=0;
@@ -674,10 +700,10 @@ printf("StartPulse \n");
 									DisplayUpdateFlags.b.StepsDisplay = 1;
 									//EXTI_ClearITPendingBit(EXTI_Line0);
 									//EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt*/
-									return;
-					}
+									//return;
 
-		else if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
+
+			 if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
 		{
 			gSequencerMode_1 = SEQUENCER_MODE_RUN;
 			gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
@@ -719,7 +745,7 @@ printf("StartPulse \n");
 
 		EXTI_ClearITPendingBit(EXTI_Line8);
 	};
-	 
+
 	 //2 Section
 	 
 	 if (EXTI->PR & (1<<6)) {
@@ -727,28 +753,13 @@ printf("StartPulse \n");
 		 //printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));
 		 //printf("Interrupt Line 8; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5));
 		// if ((!(GPIOB->IDR & GPIO_IDR_IDR_1)) && (EXTI->PR & (1<<6))){
-		 if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6)))){
-		 						/*gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
-		 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-								//printf("Both 2\n");
-		 						PULSE_LED_II_ALL_ON;
-		 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
-		 										PULSE_LED_II_1_ON;
-		 									};
-		 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
-		 										PULSE_LED_II_2_ON;
-		 									};
+		 /*if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6)))){
 
-		 									TIM_Cmd(TIM8, ENABLE);
-		 									TIM_SetCounter(TIM8, 0x00);
-		 									DisplayUpdateFlags.b.MainDisplay 	= 1;
-		 									DisplayUpdateFlags.b.StepsDisplay = 1;
-*/
 			 ExtClockProcessor_2();
-			 return;
-		 }
+			 //return;
+		 }*/
 
-		 else if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
+		  if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
 		{
 			gSequencerMode_2 = SEQUENCER_MODE_RUN;
 			gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
@@ -764,7 +775,7 @@ printf("StartPulse \n");
 									TIM_Cmd(TIM8, ENABLE);
 									TIM_SetCounter(TIM8, 0x00);
 		}
-		if(gSequencerMode_2 == SEQUENCER_MODE_WAIT_HI_Z)
+		 else if(gSequencerMode_2 == SEQUENCER_MODE_WAIT_HI_Z)
 		{
 			InitStart_2_SignalTimer();
 			//PulseStatus;
@@ -803,7 +814,12 @@ printf("StartPulse \n");
 
 
 	 if (EXTI->PR & (1<<5)) {
-		 
+		 	 	 	 	 	 	 	 //SEB 8-31-2020
+		 if(foo0 && foo5){			//External Clocking AFG1 - If Strobe A and Stop jacks both are High Advance a stage
+			 ExtClockProcessor_1();
+		 	 return;
+	 }
+
 			gSequenceStepNumber_1 = (unsigned int) (pots_step[0]-1);
 			
 			if ( gDisplayMode == DISPLAY_MODE_VIEW_1 ) {
@@ -827,7 +843,13 @@ printf("StartPulse \n");
 	 };
 		
 	 	 //Strobe jack B
+
 	 	if (EXTI->PR & (1<<7)) {
+
+	 		if(foo1 && foo7){				//External Clocking AFG1 - If Strobe B and Stop jacks both are High Advance a stage
+	 			ExtClockProcessor_2();
+	 			return;
+	 		 }
 		 
 		gSequenceStepNumber_2 = (unsigned int) (pots_step[1]-1);
 		if ( gDisplayMode == DISPLAY_MODE_VIEW_2 ) {
@@ -2990,9 +3012,6 @@ int main(void)
 	long acc;	
 
 
-
-
-
 	/* Reset update states */
 	DisplayUpdateFlags.value = 0x00;
 	DisplayUpdateFlags.b.MainDisplay 	= 1;
@@ -3072,6 +3091,7 @@ int main(void)
 	key_state = GetButton();
 	myButtons.value = key_state;
 	
+
 	if(!myButtons.b.StageAddress1Advance)
 	{
 		//if advance switch is pressed start calibration
