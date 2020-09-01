@@ -205,6 +205,9 @@ volatile uint32_t millis;
 #define KEY_DEBOUNCE_COUNT 3
 #define KEY_TIMER 5 // scan switches every 5ms
 
+#define EXTCLOCK_WINDOW 10
+unsigned char start1 = 0;
+unsigned char stop1 = 0; 
 
 #define JUMP_THRESHOLD 150 // threshold for jumping straight to a new ADC reading rather than slewing
 
@@ -657,7 +660,8 @@ void mInterruptInit(void)
 	EXTI_DeInit();
 	mInt.EXTI_Line = EXTI_Line0|EXTI_Line1|EXTI_Line5|EXTI_Line6|EXTI_Line7|EXTI_Line8;
 	mInt.EXTI_Mode = EXTI_Mode_Interrupt;
-	mInt.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+	//	mInt.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+	mInt.EXTI_Trigger = EXTI_Trigger_Rising; 
 	mInt.EXTI_LineCmd = ENABLE;	
 	EXTI_Init(&mInt);
 	
@@ -687,22 +691,22 @@ void mInterruptInit(void)
 	EXTI_ClearITPendingBit(EXTI_Line8);
 };
 
-
-//STOP KEY-BANANA Interrupt handler
-//1 SECTION
-void EXTI0_IRQHandler()
-{
-	if ( !(GPIOB->IDR & GPIO_IDR_IDR_0) && 
-		(gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
-	) {
+void doStop1() {
+  if ((gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)) {
 		gPrevSequencerMode_1 = SEQUENCER_MODE_RUN;
 		gSequencerMode_1 = SEQUENCER_MODE_STOP;	
 		
 		DisplayUpdateFlags.b.MainDisplay 	= 1;
 		DisplayUpdateFlags.b.StepsDisplay = 1;
 	};
-	
-	EXTI_ClearITPendingBit(EXTI_Line0);	
+}
+
+//STOP KEY-BANANA Interrupt handler
+//1 SECTION
+void EXTI0_IRQHandler()
+{
+  stop1 = EXTCLOCK_WINDOW; 
+  EXTI_ClearITPendingBit(EXTI_Line0);	
 };
 
 
@@ -771,16 +775,28 @@ void EXTI1_IRQHandler()
 	EXTI_ClearITPendingBit(EXTI_Line1);
 };
 
-//START KEY-BANANA Interrupt handler
-//1 & 2 SECTION
-void EXTI9_5_IRQHandler()
-{
-	//1 Section
-	//1 LH
 
-//printf("StartPulse \n");
 
-	if (EXTI->PR & (1<<8)) {	 
+void ExtClockProcessor_1() {
+  gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
+  gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+  //gStepWidth_1=0;
+  PULSE_LED_I_ALL_ON;
+  if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+    PULSE_LED_I_1_ON;
+  };
+  if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+    PULSE_LED_I_2_ON;
+  };
+  
+  TIM_Cmd(TIM14, ENABLE);
+  TIM_SetCounter(TIM14, 0x00);
+  DisplayUpdateFlags.b.MainDisplay = 1;
+  DisplayUpdateFlags.b.StepsDisplay = 1;
+};
+
+
+void doStart1() {
 	  //		gPrevSequencerMode_1 = gSequencerMode_1;
 	  // This line seems to be a bug. 
 		PulseStatus;
@@ -826,8 +842,43 @@ void EXTI9_5_IRQHandler()
 			{
 				InitStart_1_SignalTimer();
 			};
+  
+}
 
-		EXTI_ClearITPendingBit(EXTI_Line8);
+void doStrobe1() {
+  			gSequenceStepNumber_1 = (unsigned int) (pots_step[0]-1);
+			
+			if ( gDisplayMode == DISPLAY_MODE_VIEW_1 ) {
+				DisplayUpdateFlags.b.MainDisplay = 1;
+				DisplayUpdateFlags.b.StepsDisplay = 1;
+			};
+			
+				PULSE_LED_I_ALL_ON;
+				
+				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+					PULSE_LED_I_1_ON;
+				};
+				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+					PULSE_LED_I_2_ON;
+				};	
+				
+				TIM_Cmd(TIM14, ENABLE);
+				TIM_SetCounter(TIM14, 0x00);
+
+}
+
+//START KEY-BANANA Interrupt handler
+//1 & 2 SECTION
+void EXTI9_5_IRQHandler()
+{
+	//1 Section
+	//1 LH
+
+//printf("StartPulse \n");
+
+	if (EXTI->PR & (1<<8)) {
+	  start1 = EXTCLOCK_WINDOW; 
+	  EXTI_ClearITPendingBit(EXTI_Line8);
 	};
 	 
 	 //2 Section
@@ -881,25 +932,8 @@ void EXTI9_5_IRQHandler()
 	 //Strobe jack A
 	 	if (EXTI->PR & (1<<5)) {
 		 
-			gSequenceStepNumber_1 = (unsigned int) (pots_step[0]-1);
-			
-			if ( gDisplayMode == DISPLAY_MODE_VIEW_1 ) {
-				DisplayUpdateFlags.b.MainDisplay = 1;
-				DisplayUpdateFlags.b.StepsDisplay = 1;
-			};
-			
-				PULSE_LED_I_ALL_ON;
-				
-				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
-					PULSE_LED_I_1_ON;
-				};
-				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
-					PULSE_LED_I_2_ON;
-				};	
-				
-				TIM_Cmd(TIM14, ENABLE);
-				TIM_SetCounter(TIM14, 0x00);
-				
+		  doStrobe1(); 
+		  
 		EXTI_ClearITPendingBit(EXTI_Line5);
 	 };
 		
@@ -3287,11 +3321,26 @@ int main(void)
 				pots_step[j]--;
 			}
 			}
-		}
-
-
-
-	};
+	}
+	
+	// process start-stop-strobe for AFG1
+	if (stop1 && start1) { // both signals high means external clock
+	  ExtClockProcessor_1();
+	  stop1 = 0;
+	  start1 = 0;
+	}
+	else if (stop1) {
+	  if (--stop1 == 0) { // stop1 window timed out
+	    doStop1(); 
+	  }
+	}
+	else if (start1) {
+	  if (--start1 == 0) { // start1 window timed out
+	    doStart1(); 
+	  }
+	}
+	
+	};// end main loop
 	
 
 };
