@@ -205,7 +205,9 @@ volatile uint32_t millis;
 #define KEY_DEBOUNCE_COUNT 3
 #define KEY_TIMER 5 // scan switches every 5ms
 
-#define EXTCLOCK_WINDOW 10
+#define EXTCLOCK_WINDOW 4
+uint32_t jackpins = 0;
+uint32_t prev_jackpins = 0;
 unsigned char start1 = 0;
 unsigned char stop1 = 0; 
 
@@ -643,7 +645,7 @@ void mInterruptInit(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 	
 	mGPIO.GPIO_Mode = GPIO_Mode_IN;
-	mGPIO.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_5|GPIO_Pin_6|GPIO_Pin_7|GPIO_Pin_8;
+	mGPIO.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_5|GPIO_Pin_6|GPIO_Pin_7/*|GPIO_Pin_8*/;
 	mGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	mGPIO.GPIO_Speed = GPIO_Speed_100MHz;	
 	GPIO_Init(GPIOB, &mGPIO);
@@ -653,12 +655,12 @@ void mInterruptInit(void)
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource5);
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource6);
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource7);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource8);
+	//	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource8);
 
 	
 	//START-STOP LINE INIT Interrupt
 	EXTI_DeInit();
-	mInt.EXTI_Line = EXTI_Line0|EXTI_Line1|EXTI_Line5|EXTI_Line6|EXTI_Line7|EXTI_Line8;
+	mInt.EXTI_Line = EXTI_Line0|EXTI_Line1|EXTI_Line5|EXTI_Line6|EXTI_Line7/*|EXTI_Line8*/;
 	mInt.EXTI_Mode = EXTI_Mode_Interrupt;
 	//	mInt.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
 	mInt.EXTI_Trigger = EXTI_Trigger_Rising; 
@@ -688,7 +690,7 @@ void mInterruptInit(void)
 	EXTI_ClearITPendingBit(EXTI_Line5);	
 	EXTI_ClearITPendingBit(EXTI_Line6);	
 	EXTI_ClearITPendingBit(EXTI_Line7);	
-	EXTI_ClearITPendingBit(EXTI_Line8);
+	//	EXTI_ClearITPendingBit(EXTI_Line8);
 };
 
 void doStop1() {
@@ -705,7 +707,8 @@ void doStop1() {
 //1 SECTION
 void EXTI0_IRQHandler()
 {
-  stop1 = EXTCLOCK_WINDOW; 
+  // handling this in the main loop now
+  //  stop1 = EXTCLOCK_WINDOW; 
   EXTI_ClearITPendingBit(EXTI_Line0);	
 };
 
@@ -876,10 +879,10 @@ void EXTI9_5_IRQHandler()
 
 //printf("StartPulse \n");
 
-	if (EXTI->PR & (1<<8)) {
-	  start1 = EXTCLOCK_WINDOW; 
-	  EXTI_ClearITPendingBit(EXTI_Line8);
-	};
+	/* if (EXTI->PR & (1<<8)) { */
+	/*   start1 = EXTCLOCK_WINDOW;  */
+	/*   EXTI_ClearITPendingBit(EXTI_Line8); */
+	/* }; */
 	 
 	 //2 Section
 	 
@@ -3322,12 +3325,18 @@ int main(void)
 			}
 			}
 	}
-	
-	// process start-stop-strobe for AFG1
+
+	// process start-stop for AFG1
+	prev_jackpins = jackpins; 
+	jackpins = GPIOB->IDR;
+	if (!(prev_jackpins & 1) && (jackpins & 1)) stop1 = EXTCLOCK_WINDOW; // stop jack rising edge
+	if (!(prev_jackpins & (1<<8)) && (jackpins & (1<<8))) start1 = EXTCLOCK_WINDOW; // start jack rising edge
+
 	if (stop1 && start1) { // both signals high means external clock
 	  ExtClockProcessor_1();
 	  stop1 = 0;
 	  start1 = 0;
+	  // Aha! Now need to wait until pin goes low before unsticking
 	}
 	else if (stop1) {
 	  if (--stop1 == 0) { // stop1 window timed out
