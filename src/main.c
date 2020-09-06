@@ -184,17 +184,6 @@ unsigned char rev;
 #define POT_TYPE_TIME 101
 #define POT_TYPE_OTHER 102
 
-
-volatile uint16_t foo0;
-volatile uint16_t foo1;
-volatile uint16_t foo2;
-volatile uint16_t foo3;
-volatile uint16_t foo4;
-volatile uint16_t foo5;
-volatile uint16_t foo6;
-volatile uint16_t foo7;
-volatile uint16_t foo8;
-
 unsigned char GetNextStep(unsigned char _Section, unsigned char _StepNum);
 	
 //Current patches bank
@@ -211,9 +200,31 @@ uint16_t i;
 
 uint16_t tick;
 volatile uint32_t millis;
+
+
 #define KEY_DEBOUNCE_COUNT 3
 #define KEY_TIMER 5 // scan switches every 5ms
 
+#define EXTCLOCK_WINDOW 4
+uint32_t jackpins1 = 0;
+uint32_t prev_jackpins1 = 0;
+uint32_t jackpins2 = 0;
+uint32_t prev_jackpins2 = 0;
+unsigned char start1 = 0;
+unsigned char stop1 = 0; 
+unsigned char start2 = 0;
+unsigned char stop2 = 0;
+int test123;
+
+volatile uint16_t foo0;
+volatile uint16_t foo1;
+volatile uint16_t foo2;
+volatile uint16_t foo3;
+volatile uint16_t foo4;
+volatile uint16_t foo5;
+volatile uint16_t foo6;
+volatile uint16_t foo7;
+volatile uint16_t foo8;
 
 #define JUMP_THRESHOLD 150 // threshold for jumping straight to a new ADC reading rather than slewing
 
@@ -355,6 +366,190 @@ void ADC_IRQHandler()
   }
   delay_us(10);
   
+	/* // Seems like a bad idea to switch the MUX in the interrupt that reads the ADCs. */
+	/* // Do it at at the end now GAM 05/04/2020 */
+	/* //If expander is connected we should scan its sliders */
+	/* /\* if(Is_Expander_Present()) *\/ */
+	/* /\* { *\/ */
+	/* /\* 	if (ADC_POT_sel_cnt >= 71) { *\/ */
+	/* /\* 		ADC_POTS_selector_Ch(0); *\/ */
+	/* /\* 	} else { *\/ */
+	/* /\* 		ADC_POTS_selector_Ch(ADC_POT_sel_cnt+1); *\/ */
+	/* /\* 	}; *\/ */
+	/* /\* } *\/ */
+	/* /\* else *\/ */
+	/* /\* { *\/ */
+	/* /\* 	if (ADC_POT_sel_cnt >= 39) { *\/ */
+	/* /\* 		ADC_POTS_selector_Ch(0); *\/ */
+	/* /\* 	} else { *\/ */
+	/* /\* 		ADC_POTS_selector_Ch(ADC_POT_sel_cnt+1); *\/ */
+	/* /\* 	}; *\/ */
+	/* /\* } *\/ */
+
+
+	/* //ADC1 conversation complete */
+	/* if ( ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == SET) { */
+
+	/* 	// Calculate voltage slider values  */
+	/* 	if (  (ADC_POT_sel_cnt<=15)) { */
+	/* 		if ( (Steps[1][ADC_POT_sel_cnt].b.WaitVoltageSlider == 1) ) { */
+	/* 		  // Add Steven's range-check in cute bitwise form */
+	/* 		  if ((unsigned int) (ADC1->DR) >> 4 == (unsigned int) Steps[1][ADC_POT_sel_cnt].b.VLevel >>4 ) { */
+	/* 					Steps[1][ADC_POT_sel_cnt].b.WaitVoltageSlider = 0; */
+	/* 				}; */
+	/* 		} else { */
+	/* 			/\* average_array[1][ADC_POT_sel_cnt][average_index[1][ADC_POT_sel_cnt]] = (uint16_t) (ADC1->DR); *\/ */
+
+	/* 			/\* average_index[1][ADC_POT_sel_cnt]++; *\/ */
+	/* 			/\* if(average_index[1][ADC_POT_sel_cnt] == NUMS) average_index[1][ADC_POT_sel_cnt] = 0; *\/ */
+
+	/* 			/\* acc = 0; *\/ */
+	/* 			/\* for(i = 0; i < NUMS; i++) *\/ */
+	/* 			/\* { *\/ */
+	/* 			/\* 	acc += average_array[1][ADC_POT_sel_cnt][i]; *\/ */
+	/* 			/\* } *\/ */
+	/* 			/\* Steps[1][ADC_POT_sel_cnt].b.VLevel = acc/NUMS; *\/ */
+	/* 		  //				Steps[1][ADC_POT_sel_cnt].b.VLevel += ((uint16_t) ADC1->DR - Steps[1][ADC_POT_sel_cnt].b.VLevel) >> 4; */
+	/* 		  steps_lp[1][ADC_POT_sel_cnt] += ((uint16_t) ADC1->DR - steps_lp[1][ADC_POT_sel_cnt]) >> 4; */
+	/* 		  Steps[1][ADC_POT_sel_cnt].b.VLevel += (steps_lp[1][ADC_POT_sel_cnt] - Steps[1][ADC_POT_sel_cnt].b.VLevel) >> 4; */
+	/* 			//Steps[1][ADC_POT_sel_cnt].b.VLevel = ((unsigned int) (ADC1->DR)+(unsigned int) Steps[1][ADC_POT_sel_cnt].b.VLevel)/2; */
+	/* 		}; */
+	/* 		if ( (Steps[0][ADC_POT_sel_cnt].b.WaitVoltageSlider == 1) ) { */
+	/* 		  // Check if voltage slider value is close to saved value and if so unstick */
+  	/* 		  if ((unsigned int) (ADC1->DR) >> 4 == (unsigned int) Steps[0][ADC_POT_sel_cnt].b.VLevel >>4 ) { */
+	/* 					Steps[0][ADC_POT_sel_cnt].b.WaitVoltageSlider = 0; */
+	/* 		  }; */
+	/* 		} else { */
+	/* 		  /\* average_array[0][ADC_POT_sel_cnt][average_index[0][ADC_POT_sel_cnt]] = (uint16_t) (ADC1->DR); *\/ */
+
+	/* 		  /\* 	average_index[0][ADC_POT_sel_cnt]++; *\/ */
+	/* 		  /\* 	if(average_index[0][ADC_POT_sel_cnt] == NUMS) average_index[0][ADC_POT_sel_cnt] = 0; *\/ */
+
+	/* 		  /\* 	acc = 0; *\/ */
+	/* 		  /\* 	for(i = 0; i < NUMS; i++) *\/ */
+	/* 		  /\* 	{ *\/ */
+	/* 		  /\* 		acc += average_array[0][ADC_POT_sel_cnt][i]; *\/ */
+	/* 		  /\* 	} *\/ */
+	/* 		  /\* 	Steps[0][ADC_POT_sel_cnt].b.VLevel = acc/NUMS; *\/ */
+	/* 		  //Steps[0][ADC_POT_sel_cnt].b.VLevel = ((unsigned int) (ADC1->DR)+(unsigned int) Steps[0][ADC_POT_sel_cnt].b.VLevel)/2; */
+	/* 		  //			  if (ADC_POT_sel_cnt==0) step1 = ADC1->DR; */
+	/* 		  steps_lp[0][ADC_POT_sel_cnt] += ((uint16_t) ADC1->DR - steps_lp[0][ADC_POT_sel_cnt]) >> 4; */
+	/* 		  Steps[0][ADC_POT_sel_cnt].b.VLevel += (steps_lp[0][ADC_POT_sel_cnt] - Steps[0][ADC_POT_sel_cnt].b.VLevel) >> 4; */
+	/* 		  //			  Steps[0][ADC_POT_sel_cnt].b.VLevel += ((uint16_t) ADC1->DR - Steps[0][ADC_POT_sel_cnt].b.VLevel) >> 4; */
+	/* 		}; */
+	/* 		NeedInc = 1; */
+	/* 	}; */
+
+	/* 	//If expander is connected calculate additional voltagesH */
+	/* 	if(Is_Expander_Present()) */
+	/* 	{ */
+	/* 		if (  (ADC_POT_sel_cnt>=40 && (ADC_POT_sel_cnt<=55))) { */
+	/* 			if ( (Steps[1][ADC_POT_sel_cnt-24].b.WaitVoltageSlider == 1) ) { */
+	/* 					if ( (unsigned int) (ADC1->DR) == (unsigned int) Steps[1][ADC_POT_sel_cnt-24].b.VLevel ) { */
+	/* 						Steps[1][ADC_POT_sel_cnt-24].b.WaitVoltageSlider = 0; */
+	/* 					}; */
+	/* 			} else { */
+	/* 				Steps[1][ADC_POT_sel_cnt-24].b.VLevel = ((unsigned int) (ADC1->DR)+(unsigned int) Steps[1][ADC_POT_sel_cnt-24].b.VLevel)/2; */
+	/* 			}; */
+	/* 			if ( (Steps[0][ADC_POT_sel_cnt-24].b.WaitVoltageSlider == 1) ) { */
+	/* 			if ( (unsigned int) (ADC1->DR) == (unsigned int) Steps[0][ADC_POT_sel_cnt-24].b.VLevel ) { */
+	/* 						Steps[0][ADC_POT_sel_cnt-24].b.WaitVoltageSlider = 0; */
+	/* 			}; */
+	/* 			} else { */
+	/* 				Steps[0][ADC_POT_sel_cnt-24].b.VLevel = ((unsigned int) (ADC1->DR)+(unsigned int) Steps[0][ADC_POT_sel_cnt-24].b.VLevel)/2; */
+	/* 			}; */
+	/* 			NeedInc = 1; */
+	/* 		} */
+
+	/* 		//Calculate average of 2 measurements for time sliders */
+	/* 			if ((ADC_POT_sel_cnt>=56) && (ADC_POT_sel_cnt<=71)) { */
+	/* 			  Steps[0][ADC_POT_sel_cnt-40].b.TLevel += ((unsigned int) ADC1->DR - Steps[0][ADC_POT_sel_cnt-40].b.TLevel) >> 4 ; */
+	/* 			  Steps[1][ADC_POT_sel_cnt-40].b.TLevel += ((unsigned int) ADC1->DR - Steps[1][ADC_POT_sel_cnt-40].b.TLevel) >> 4 ; */
+	/* 			    //    Steps[0][ADC_POT_sel_cnt-40].b.TLevel = (Steps0][ADC_POT_sel_cnt-40].b.TLevel+(unsigned int)(ADC1->DR))/2; */
+	/* 			    //    Steps[1][ADC_POT_sel_cnt-40].b.TLevel = (Steps[1][ADC_POT_sel_cnt-40].b.TLevel+(unsigned int)(ADC1->DR))/2; */
+	/* 			NeedInc = 1; */
+	/* 		}; */
+	/* 	} */
+	/* 	// Calculate time slider values */
+	/* 	// Time sliders for steps 1-16 are pots 24--39 inclusive. */
+	/* 	if ((ADC_POT_sel_cnt>=24) && (ADC_POT_sel_cnt<=39)) { */
+
+	/* 	  if (Steps[0][ADC_POT_sel_cnt-24].b.WaitTimeSlider) {		  // Are we waiting? */
+	/* 	    if ((unsigned int)Steps[0][ADC_POT_sel_cnt-24].b.TLevel >> 4 == (unsigned int)(ADC1->DR)>>4) // close enough, stop waiting */
+	/* 	      { */
+	/* 		Steps[0][ADC_POT_sel_cnt-24].b.WaitTimeSlider = 0; */
+	/* 	      } */
+	/* 	  } */
+	/* 	  else */
+	/* 	    { */
+	/* 	      // Two-pole filter */
+	/* 	      tsteps_lp[0][ADC_POT_sel_cnt-24] += ((uint16_t) ADC1->DR - tsteps_lp[0][ADC_POT_sel_cnt-24]) >> 4; */
+	/* 	      Steps[0][ADC_POT_sel_cnt-24].b.TLevel += (tsteps_lp[0][ADC_POT_sel_cnt-24] - Steps[0][ADC_POT_sel_cnt-24].b.TLevel) >> 4 ; */
+	/* 		// Steps[0][ADC_POT_sel_cnt-24].b.TLevel = (Steps[0][ADC_POT_sel_cnt-24].b.TLevel+(unsigned int)(ADC1->DR))/2; */
+	/* 	    } */
+	/* 	  if (Steps[1][ADC_POT_sel_cnt-24].b.WaitTimeSlider) {		  // Are we waiting? */
+	/* 	    if ((unsigned int)Steps[1][ADC_POT_sel_cnt-24].b.TLevel >> 4 == (unsigned int)(ADC1->DR)>>4) // close enough, stop waiting */
+	/* 	      { */
+	/* 		Steps[1][ADC_POT_sel_cnt-24].b.WaitTimeSlider = 0; */
+	/* 	      } */
+	/* 	  } */
+	/* 	  else */
+	/* 	    { */
+	/* 	      // Two-pole filter */
+	/* 	      tsteps_lp[1][ADC_POT_sel_cnt-24] += ((uint16_t) ADC1->DR - tsteps_lp[1][ADC_POT_sel_cnt-24]) >> 4; */
+	/* 	      Steps[1][ADC_POT_sel_cnt-24].b.TLevel += (tsteps_lp[1][ADC_POT_sel_cnt-24] - Steps[1][ADC_POT_sel_cnt-24].b.TLevel) >> 4 ; */
+	/* 		//	Steps[1][ADC_POT_sel_cnt-24].b.TLevel = (Steps[1][ADC_POT_sel_cnt-24].b.TLevel+(unsigned int)(ADC1->DR))/2; */
+	/* 	    } */
+	/* 	  NeedInc = 1; */
+	/* 	}; */
+
+
+	/* 	//Clear end of conversion flag */
+	/* 	ADC_ClearFlag(ADC1, ADC_FLAG_EOC); */
+
+	/* } */
+
+	/* //ADC2 used for external inputs conversion */
+	/* 	if ( ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC) == SET ) { */
+	/* 	if ((ADC_POT_sel_cnt>=16) && (ADC_POT_sel_cnt<=23)) { */
+	/* 	  //		  			AddData[ADC_POT_sel_cnt-16] = (unsigned int)(ADC2->DR); */
+	/* 	  // One pole filter on the external inputs for now */
+	/* 	  // NB this code only works when AddData is a uint16_t; unsigned int does not work properly */
+	/* 	  // because of how the compiler handles arithmetic on unsigned values.  */
+	/* 	   AddData[ADC_POT_sel_cnt-16] += ((uint16_t) (ADC2->DR) - AddData[ADC_POT_sel_cnt-16])>>4;  */
+	/* 		NeedInc = 1; */
+	/* 		if (ADC_POT_sel_cnt == 22) step1 = ADC2->DR;  */
+	/* 	}; */
+	/* 	ADC_ClearFlag(ADC2, ADC_FLAG_EOC); */
+
+	/* }; */
+
+	/* 	//Calculate next channel to measure */
+	/* 	// and now also switch the MUX here. GAM 05/04/2020 */
+	/* if(Is_Expander_Present()) */
+	/* { */
+	/*   if (NeedInc) { */
+	/* 	/\* ADC_POT_sel_cnt++; *\/ */
+	/* 	/\* if (ADC_POT_sel_cnt >= 72) {//40 *\/ */
+	/* 	/\* 	ADC_POT_sel_cnt = 0; *\/ */
+	/* 	/\* }; *\/ */
+	/* 	/\* ADC_POTS_selector_Ch(ADC_POT_sel_cnt); *\/ */
+	/*     ADC_POT_sel_cnt = ADC_inc_expanded(ADC_POT_sel_cnt); // figure out next pot and switch the mux */
+	/* 	delay_us(10); // don't know if there is time for this! */
+	/*   }; */
+	/* } */
+	/* else */
+	/* { */
+	/*   if (NeedInc) { */
+	/* 	/\* ADC_POT_sel_cnt++; *\/ */
+	/* 	/\* if (ADC_POT_sel_cnt >= 40) {//40 *\/ */
+	/* 	/\* 	ADC_POT_sel_cnt = 0; *\/ */
+	/* 	/\* }; *\/ */
+	/* 	/\* ADC_POTS_selector_Ch(ADC_POT_sel_cnt); *\/ */
+	/*     ADC_POT_sel_cnt = ADC_inc(ADC_POT_sel_cnt); // figure out next pot and switch the mux */
+	/* 	delay_us(10); */
+	/*   }; */
+	/* } */
 
 };
 
@@ -374,9 +569,9 @@ void mADC_init(void)
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE); 
 		
 	TIM_TimeBaseStructInit(&TimeBaseInit);
-	TimeBaseInit.TIM_Prescaler 			= 0; // prescaler at 1 means scanning ADCs at 10kHz. Set to 0 for 20kHz.
+	TimeBaseInit.TIM_Prescaler 			= 1; 
 	TimeBaseInit.TIM_CounterMode 		= TIM_CounterMode_Up;
-  TimeBaseInit.TIM_Period 				= 4200-1;
+  TimeBaseInit.TIM_Period 				= 4200-1;// for 40kHz
 	TimeBaseInit.TIM_ClockDivision 	= TIM_CKD_DIV1;	
   TIM_TimeBaseInit(TIM2, &TimeBaseInit); 
 
@@ -465,7 +660,7 @@ void mInterruptInit(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 	
 	mGPIO.GPIO_Mode = GPIO_Mode_IN;
-	mGPIO.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_5|GPIO_Pin_6|GPIO_Pin_7|GPIO_Pin_8;
+	mGPIO.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_5|/*GPIO_Pin_6|*/GPIO_Pin_7/*|GPIO_Pin_8*/;
 	mGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	mGPIO.GPIO_Speed = GPIO_Speed_100MHz;	
 	GPIO_Init(GPIOB, &mGPIO);
@@ -473,113 +668,79 @@ void mInterruptInit(void)
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource0);
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource1);
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource5);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource6);
+	//SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource6);
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource7);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource8);
+	//	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, GPIO_PinSource8);
 
 	
 	//START-STOP LINE INIT Interrupt
 	EXTI_DeInit();
-	mInt.EXTI_Line = EXTI_Line0|EXTI_Line1|EXTI_Line5|EXTI_Line6|EXTI_Line7|EXTI_Line8;
+	mInt.EXTI_Line = EXTI_Line0|EXTI_Line1|EXTI_Line5|/*EXTI_Line6|*/EXTI_Line7/*|EXTI_Line8*/;
 	mInt.EXTI_Mode = EXTI_Mode_Interrupt;
-	mInt.EXTI_Trigger = EXTI_Trigger_Rising;
+	//	mInt.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+	mInt.EXTI_Trigger = EXTI_Trigger_Rising; 
 	mInt.EXTI_LineCmd = ENABLE;	
 	EXTI_Init(&mInt);
-
+	
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI0_IRQn; 						
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority 				= 0x00;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority 				= 0x00; 
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; 
   NVIC_Init(&NVIC_InitStructure);
 	
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI1_IRQn; 						
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0xF0;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority 				= 0x00; 
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; 
   NVIC_Init(&NVIC_InitStructure);
 	
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn; 						
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority 	= 0x00; 
   NVIC_InitStructure.NVIC_IRQChannelSubPriority 				= 0x00; 
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; 
   NVIC_Init(&NVIC_InitStructure);
 	
-	EXTI_ClearITPendingBit(EXTI_Line0);	
+	EXTI_ClearITPendingBit(EXTI_Line0);
 	EXTI_ClearITPendingBit(EXTI_Line1);	
 	EXTI_ClearITPendingBit(EXTI_Line5);	
-	EXTI_ClearITPendingBit(EXTI_Line6);	
+	//EXTI_ClearITPendingBit(EXTI_Line6);
 	EXTI_ClearITPendingBit(EXTI_Line7);	
-	EXTI_ClearITPendingBit(EXTI_Line8);
+	//	EXTI_ClearITPendingBit(EXTI_Line8);
 };
 
-int EXT_CLK1;
-int EXT_CLK2;
-
-void ExtClockProcessor_1(){
-	gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
-	gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-							//gStepWidth_1=0;
-							EXT_CLK1 = 1;
-							printf("ADVANCE1: %i\n", __LINE__);
-							PULSE_LED_I_ALL_ON;
-										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
-											PULSE_LED_I_1_ON;
-										};
-										if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
-											PULSE_LED_I_2_ON;
-										};
-
-										TIM_Cmd(TIM14, ENABLE);
-										TIM_SetCounter(TIM14, 0x00);
-										DisplayUpdateFlags.b.MainDisplay 	= 1;
-										DisplayUpdateFlags.b.StepsDisplay = 1;
-										EXTI_ClearITPendingBit(EXTI_Line0);
-										EXTI_ClearITPendingBit(EXTI_Line5);  //Start interrupt
-
-	};
-
-void ExtClockProcessor_2(){
-
-									gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
-			 						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-			 						EXT_CLK2 = 1;
-
-			 						printf("ADVANCE2: %i\n", __LINE__);
-			 						PULSE_LED_II_ALL_ON;
-			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
-			 										PULSE_LED_II_1_ON;
-			 									};
-			 									if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
-			 										PULSE_LED_II_2_ON;
-			 									};
-
-			 									TIM_Cmd(TIM8, ENABLE);
-			 									TIM_SetCounter(TIM8, 0x00);
-			 									DisplayUpdateFlags.b.MainDisplay 	= 1;
-			 									DisplayUpdateFlags.b.StepsDisplay = 1;
-			 									EXTI_ClearITPendingBit(EXTI_Line1);
-												EXTI_ClearITPendingBit(EXTI_Line7);  //Start interrupt
-
-}
-
-//STOP KEY-BANANA Interrupt handler
-//1 SECTION
-void EXTI0_IRQHandler()
-{
-	//foo0=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
-
-	 if ((GPIOB->IDR & GPIO_IDR_IDR_0) &&
-		(gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)
-	) {
-		//printf("Stop Pulse 1 \n");
+void doStop1() {
+  if ((gSequencerMode_1 != SEQUENCER_MODE_WAIT && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z)) {
 		gPrevSequencerMode_1 = SEQUENCER_MODE_RUN;
 		gSequencerMode_1 = SEQUENCER_MODE_STOP;	
 		
 		DisplayUpdateFlags.b.MainDisplay 	= 1;
 		DisplayUpdateFlags.b.StepsDisplay = 1;
 	};
-	
-	EXTI_ClearITPendingBit(EXTI_Line0);
+}
+
+void doStop2() {
+	//if we are not in wait condition then stop the sequenser
+		if (gSequencerMode_2 != SEQUENCER_MODE_WAIT && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z)
+		 {
+			gPrevSequencerMode_2 = SEQUENCER_MODE_RUN;
+			gSequencerMode_2 = SEQUENCER_MODE_STOP;
+
+			//Update both
+			DisplayUpdateFlags.b.MainDisplay = 1;
+			DisplayUpdateFlags.b.StepsDisplay = 1;
+
+	};
+}
+
+//STOP KEY-BANANA Interrupt handler
+//1 SECTION
+void EXTI0_IRQHandler()
+{
+
+
+  // handling this in the main loop now
+  //  stop1 = EXTCLOCK_WINDOW; 
+  EXTI_ClearITPendingBit(EXTI_Line0);	
 };
 
 
@@ -629,86 +790,61 @@ void InitClear_Timer()
 	TIM_ITConfig(TIM6, TIM_IT_Update, ENABLE);
 };
 
-
-
 //STOP KEY-BANANA Interrupt handler
 //2 SECTION
 void EXTI1_IRQHandler()
 {
-	//if we are not in wait condition then stop the sequenser
-	if (!(GPIOB->IDR & GPIO_IDR_IDR_1)  &&
-		(gSequencerMode_2 != SEQUENCER_MODE_WAIT && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z)
-	) {
-
-		gPrevSequencerMode_2 = SEQUENCER_MODE_RUN;
-		gSequencerMode_2 = SEQUENCER_MODE_STOP;	
-		//printf("Stop Pulse 2 \n");
-
-		//Update both
-		DisplayUpdateFlags.b.MainDisplay = 1;
-		DisplayUpdateFlags.b.StepsDisplay = 1;
-	};
 	
+
 	EXTI_ClearITPendingBit(EXTI_Line1);
 };
 
-//START KEY-BANANA Interrupt handler
-//1 & 2 SECTION
-void EXTI9_5_IRQHandler()
-{
-		//delay_us(50);
-//printf("Stop Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0));
-//printf("Start Interrupt Line 8; %i\n\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
-
-	//1 Section
-	//1 LH
-
-printf("StartPulse \n");
-			foo0=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0)); 	// SEB 8-31-2020
-  			foo1=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));	// Directly reading GPIO values for Start, Stop, and Strobe jack inputs
-  			foo2=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_2));
-  			foo3=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_3));
-  			foo4=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4));
-  			foo5=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5));
-  			foo6=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6));
-  			foo7=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7));
-  			foo8=(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8));
-	if ((EXTI->PR & (1<<8))) {
-		//PulseStatus;
-
-		//if ((GPIOB->IDR & GPIO_IDR_IDR_0) && (EXTI->PR & (1<<8))){
 
 
+void ExtClockProcessor_1() {
+ printf("ECP1\n\n");
+	gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
+  gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
+  //gStepWidth_1=0;
+  PULSE_LED_I_ALL_ON;
+  if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
+    PULSE_LED_I_1_ON;
+  };
+  if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
+    PULSE_LED_I_2_ON;
+  };
+  
+  TIM_Cmd(TIM14, ENABLE);
+  TIM_SetCounter(TIM14, 0x00);
+  DisplayUpdateFlags.b.MainDisplay = 1;
+  DisplayUpdateFlags.b.StepsDisplay = 1;
+};
 
-			/*if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)))){
-							ExtClockProcessor_1();
-						}*/
-		/*if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)))){
-				ExtClockProcessor_1();
-			}*/
-			/*gSequencerMode_1 = SEQUENCER_MODE_ADVANCE;
-						gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
-						gStepWidth_1=0;
+void ExtClockProcessor_2() {
 
-						//return;
-						PULSE_LED_I_ALL_ON;
-									if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
-										PULSE_LED_I_1_ON;
-									};
-									if (Steps[0][gSequenceStepNumber_1].b.OutputPulse2) {
-										PULSE_LED_I_2_ON;
-									};
+					gSequencerMode_2 = SEQUENCER_MODE_ADVANCE;
+					gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
 
-									TIM_Cmd(TIM14, ENABLE);
-									TIM_SetCounter(TIM14, 0x00);
-									DisplayUpdateFlags.b.MainDisplay 	= 1;
-									DisplayUpdateFlags.b.StepsDisplay = 1;
-									//EXTI_ClearITPendingBit(EXTI_Line0);
-									//EXTI_ClearITPendingBit(EXTI_Line8);  //Start interrupt*/
-									//return;
+					PULSE_LED_II_ALL_ON;
+
+					if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+						PULSE_LED_II_1_ON;
+					};
+					if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+						PULSE_LED_II_2_ON;
+					};
+
+					TIM_Cmd(TIM8, ENABLE);
+					TIM_SetCounter(TIM8, 0x00);
+					DisplayUpdateFlags.b.MainDisplay = 1;
+					  DisplayUpdateFlags.b.StepsDisplay = 1;
+}
 
 
-			 if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
+void doStart1() {
+
+
+		if((gSequencerMode_1 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_1 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_1 != SEQUENCER_MODE_WAIT) && (gSequencerMode_1 != SEQUENCER_MODE_RUN))
 		{
 			gSequencerMode_1 = SEQUENCER_MODE_RUN;
 			gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
@@ -743,89 +879,62 @@ printf("StartPulse \n");
 			TIM_Cmd(TIM14, ENABLE);
 			TIM_SetCounter(TIM14, 0x00);
 }
+		
 			if (gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
 			{
 				InitStart_1_SignalTimer();
 			};
+  
+}
 
-		EXTI_ClearITPendingBit(EXTI_Line8);
-	};
+void doStart2() {
+	if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
+			{
+				gSequencerMode_2 = SEQUENCER_MODE_RUN;
+				gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
 
-	 //2 Section
-	 
-	 if (EXTI->PR & (1<<6)) {
-		 
-		 //printf("Interrupt Line 0; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1));
-		 //printf("Interrupt Line 8; %i\n", GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5));
-		// if ((!(GPIOB->IDR & GPIO_IDR_IDR_1)) && (EXTI->PR & (1<<6))){
-		 /*if ((GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) && (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6)))){
+				PULSE_LED_II_ALL_ON;
+										if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
+											PULSE_LED_II_1_ON;
+										};
+										if (Steps[0][gSequenceStepNumber_2].b.OutputPulse2) {
+											PULSE_LED_II_2_ON;
+										};
 
-			 ExtClockProcessor_2();
-			 //return;
-		 }*/
+										TIM_Cmd(TIM8, ENABLE);
+										TIM_SetCounter(TIM8, 0x00);
+			}
+			if(gSequencerMode_2 == SEQUENCER_MODE_WAIT_HI_Z)
+			{
+				InitStart_2_SignalTimer();
+				PulseStatus;
+							gSequencerMode_2 = SEQUENCER_MODE_RUN;
+							gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+							//PulseStatus;
 
-		  if((gSequencerMode_2 != SEQUENCER_MODE_STAY_HI_Z && gSequencerMode_2 != SEQUENCER_MODE_WAIT_HI_Z) && (gSequencerMode_2 != SEQUENCER_MODE_WAIT) && (gSequencerMode_2 != SEQUENCER_MODE_RUN))
-		{
-			gSequencerMode_2 = SEQUENCER_MODE_RUN;
-			gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+							PULSE_LED_II_ALL_ON;
+							if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
+								PULSE_LED_II_1_ON;
+							};
+							if (Steps[0][gSequenceStepNumber_2].b.OutputPulse2) {
+								PULSE_LED_II_2_ON;
+							};
 
-			PULSE_LED_II_ALL_ON;
-									if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
-										PULSE_LED_II_1_ON;
-									};
-									if (Steps[0][gSequenceStepNumber_2].b.OutputPulse2) {
-										PULSE_LED_II_2_ON;
-									};
+							TIM_Cmd(TIM8, ENABLE);
+							TIM_SetCounter(TIM8, 0x00);
+			}
 
-									TIM_Cmd(TIM8, ENABLE);
-									TIM_SetCounter(TIM8, 0x00);
-		}
-		 else if(gSequencerMode_2 == SEQUENCER_MODE_WAIT_HI_Z)
-		{
-			InitStart_2_SignalTimer();
-			//PulseStatus;
-						gSequencerMode_2 = SEQUENCER_MODE_RUN;
-						gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
-						//PulseStatus;
+			if(gSequencerMode_2 == SEQUENCER_MODE_STAY_HI_Z)
+							{
+								InitStart_2_SignalTimer();
+							}
 
-						PULSE_LED_II_ALL_ON;
-						if (Steps[0][gSequenceStepNumber_2].b.OutputPulse1) {
-							PULSE_LED_II_1_ON;
-						};
-						if (Steps[0][gSequenceStepNumber_2].b.OutputPulse2) {
-							PULSE_LED_II_2_ON;
-						};
+			//EXTI_ClearITPendingBit(EXTI_Line6);
 
-						TIM_Cmd(TIM8, ENABLE);
-						TIM_SetCounter(TIM8, 0x00);
-		}
-		
-		if(gSequencerMode_2 == SEQUENCER_MODE_STAY_HI_Z)
-						{
-							InitStart_2_SignalTimer();
-						}
+}
 
-		/*if(gSequencerMode_2 == SEQUENCER_MODE_STAY_HI_Z)
-						{
-							InitStart_1_SignalTimer();
-						}*/
-
-		EXTI_ClearITPendingBit(EXTI_Line6);
-	 };
-	 
-	 //Strobe jack A
-
-
-
-
-	 if (EXTI->PR & (1<<5)) {
-		 	 	 	 	 	 	 	 //SEB 8-31-2020
-		 if(foo0 && foo5){			//External Clocking AFG1 - If Strobe A and Stop jacks both are High Advance a stage
-			 ExtClockProcessor_1();
-		 	 return;
-	 }
-
-			gSequenceStepNumber_1 = (unsigned int) (pots_step[0]-1);
+void doStrobe1() {
+  			gSequenceStepNumber_1 = (unsigned int) (pots_step[0]-1);
 			
 			if ( gDisplayMode == DISPLAY_MODE_VIEW_1 ) {
 				DisplayUpdateFlags.b.MainDisplay = 1;
@@ -843,38 +952,66 @@ printf("StartPulse \n");
 				
 				TIM_Cmd(TIM14, ENABLE);
 				TIM_SetCounter(TIM14, 0x00);
-				
+
+}
+
+void doStrobe2() {
+	gSequenceStepNumber_2 = (unsigned int) (pots_step[1]-1);
+			if ( gDisplayMode == DISPLAY_MODE_VIEW_2 ) {
+			DisplayUpdateFlags.b.MainDisplay = 1;
+			DisplayUpdateFlags.b.StepsDisplay = 1;
+		};
+
+					PULSE_LED_II_ALL_ON;
+
+					if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+						PULSE_LED_II_1_ON;
+					};
+					if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+						PULSE_LED_II_2_ON;
+					};
+
+					TIM_Cmd(TIM8, ENABLE);
+				TIM_SetCounter(TIM8, 0x00);
+
+
+}
+
+
+//START KEY-BANANA Interrupt handler
+//1 & 2 SECTION
+void EXTI9_5_IRQHandler()
+{
+	//1 Section
+	//1 LH
+
+//printf("StartPulse \n");
+
+	/* if (EXTI->PR & (1<<8)) { */
+	/*   start1 = EXTCLOCK_WINDOW;  */
+	/*   EXTI_ClearITPendingBit(EXTI_Line8); */
+	/* }; */
+	 
+	 //2 Section
+	 
+	/* if (EXTI->PR & (1<<6)) {
+		 
+
+	 };*/
+	 
+	 //Strobe jack A
+	 	if (EXTI->PR & (1<<5)) {
+		 
+		  doStrobe1(); 
+		  
 		EXTI_ClearITPendingBit(EXTI_Line5);
 	 };
 		
 	 	 //Strobe jack B
-
 	 	if (EXTI->PR & (1<<7)) {
+	 		doStrobe2();
+			EXTI_ClearITPendingBit(EXTI_Line7);
 
-	 		if(foo1 && foo7){				//External Clocking AFG1 - If Strobe B and Stop jacks both are High Advance a stage
-	 			ExtClockProcessor_2();
-	 			return;
-	 		 }
-		 
-		gSequenceStepNumber_2 = (unsigned int) (pots_step[1]-1);
-		if ( gDisplayMode == DISPLAY_MODE_VIEW_2 ) {
-		DisplayUpdateFlags.b.MainDisplay = 1;
-		DisplayUpdateFlags.b.StepsDisplay = 1;
-	};
-			
-				PULSE_LED_II_ALL_ON;
-				
-				if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
-					PULSE_LED_II_1_ON;
-				};
-				if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
-					PULSE_LED_II_2_ON;
-				};	
-				
-				TIM_Cmd(TIM8, ENABLE);
-			TIM_SetCounter(TIM8, 0x00);
-				
-		EXTI_ClearITPendingBit(EXTI_Line7);
 	 };
 	 
 	DisplayUpdateFlags.b.MainDisplay = 1;
@@ -1124,7 +1261,6 @@ unsigned char GetNextStep(unsigned char _Section, unsigned char _StepNum)
 	/* ENDOF: Ã�â€¢Ã‘ï¿½Ã�Â»Ã�Â¸ Ã‘Ë†Ã�Â°Ã�Â³ Ã�Â·Ã�Â°Ã�ÂºÃ�Â¾Ã�Â½Ã‘â€¡Ã�Â¸Ã�Â»Ã‘ï¿½Ã‘ï¿½ - Ã�Â¿Ã�ÂµÃ‘â‚¬Ã�ÂµÃ‘â€¦Ã�Â¾Ã�Â´Ã�Â¸Ã�Â¼ Ã�Â½Ã�Â° Ã‘ï¿½Ã�Â»Ã�ÂµÃ�Â´Ã‘Æ’Ã‘Å½Ã‘â€°Ã�Â¸Ã�Â¹ */
 
     //printf("GetNextStepReturnValue: %i \n", ret_val);
-
     return ret_val;
 };
 
@@ -1149,6 +1285,8 @@ void TIM4_IRQHandler()
 		/* Calculate prescaler/multiplier*/
 
 		TIM4->PSC = (uint16_t) ((((((float) AddData[ADC_TIMEMULTIPLY_Ch_1])*3.5f)/CalConstants[ADC_TIMEMULTIPLY_Ch_1])+0.5f)*STEP_TIMER_PRESCALER);
+		
+	//	TIM4->PSC = (uint16_t) ((((((float) AddData[ADC_TIMEMULTIPLY_Ch_1])*3.5f)/CalConstants[ADC_TIMEMULTIPLY_Ch_1])+0.5f)*STEP_TIMER_PRESCALER);
 
 
 		if (Steps[0][gSequenceStepNumber_1].b.Sloped) {
@@ -1236,7 +1374,7 @@ void TIM4_IRQHandler()
 			if (gSequencerMode_1 == SEQUENCER_MODE_RUN) {
 				gSequenceStepNumber_1 = GetNextStep(0, gSequenceStepNumber_1);
 				//printf("RUN \n");
-				//PulseStatus;
+				PulseStatus;
 				PULSE_LED_I_ALL_ON;
 				
 				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
@@ -1264,7 +1402,7 @@ void TIM4_IRQHandler()
 
 			else
 			{
-				//PulseStatus;
+				PulseStatus;
 						PULSE_LED_I_ALL_ON;
 
 						if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
@@ -1399,7 +1537,6 @@ void TIM5_IRQHandler()
 			};
 			
 			if (Steps[1][gSequenceStepNumber_2].b.OpModeSTOP) {
-				printf("STOP_Switch: %i\n", __LINE__);
 				gPrevSequencerMode_2 = gSequencerMode_2;
 				gSequencerMode_2 = SEQUENCER_MODE_STOP;				
 			};
@@ -1458,12 +1595,8 @@ void TIM5_IRQHandler()
 
 							}
 
-				else if (EXT_CLK2){
-
-				}
 							else
 							{
-								printf("STOP MODE: %i", __LINE__);
 							PULSE_LED_II_ALL_ON;
 
 							if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
@@ -1477,6 +1610,23 @@ void TIM5_IRQHandler()
 							TIM_SetCounter(TIM8, 0x00);
 			};
 		};
+
+			if (gSequencerMode_2 == SEQUENCER_MODE_ADVANCE) {
+							gSequenceStepNumber_2 = GetNextStep(1, gSequenceStepNumber_2);
+
+										PULSE_LED_II_ALL_ON;
+
+										if (Steps[1][gSequenceStepNumber_2].b.OutputPulse1) {
+											PULSE_LED_II_1_ON;
+										};
+										if (Steps[1][gSequenceStepNumber_2].b.OutputPulse2) {
+											PULSE_LED_II_2_ON;
+										};
+
+										TIM_Cmd(TIM8, ENABLE);
+										TIM_SetCounter(TIM8, 0x00);
+						};
+
 		}
 
 	if (gSequencerMode_2 == SEQUENCER_MODE_WAIT) {
@@ -1570,9 +1720,9 @@ void mTimersInit(void)
 	
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14, ENABLE);
 	
-	TIM_TimeBaseStructInit(&myTimer);  //Pulse 1 Out timer
+	TIM_TimeBaseStructInit(&myTimer);
 	myTimer.TIM_Prescaler = 210;
-	myTimer.TIM_Period = 120;
+	myTimer.TIM_Period = 320;
 	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	
@@ -1645,15 +1795,14 @@ void TIM3_IRQHandler()
 	if((gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
 			&& (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 1))
 	{
-//PulseStatus;
-
+PulseStatus;
 
 
 	}
 	else if((gSequencerMode_1 == SEQUENCER_MODE_STAY_HI_Z)
 			&& (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8) == 0))
 	{
-		//PulseStatus;
+		PulseStatus;
 
 
 		gSequencerMode_1 = SEQUENCER_MODE_RUN;
@@ -2598,6 +2747,7 @@ unsigned char keyb_proc(uButtons * key)
 	};
 	
 	if (!key->b.StageAddress1Advance) {
+		
 		advanced_counter_1++;
 		//		if(advanced_counter_1 == 10)
 		{
@@ -2616,6 +2766,7 @@ unsigned char keyb_proc(uButtons * key)
 		}
 		gSequencerMode_1 = SEQUENCER_MODE_STOP;
 						PULSE_LED_I_ALL_ON;
+				
 				if (Steps[0][gSequenceStepNumber_1].b.OutputPulse1) {
 					PULSE_LED_I_1_ON;
 				};
@@ -2893,8 +3044,8 @@ void PermutePulses(void)
 
 
 
-void Calibration(void){
-  //printf("%d \n ",__LINE__);
+void Calibration(void)
+{	//printf("%d \n ",__LINE__);
 	unsigned int i=0;
 	uButtons myButtons;
 	uLeds mLeds;	
@@ -3001,8 +3152,6 @@ void Calibration(void){
 
 }
 
-
-
 	RCC_ClocksTypeDef RCC_Clocks;
 
 int main(void)
@@ -3020,6 +3169,7 @@ int main(void)
 	uint16_t  next_step_tres = 0, prev_step_tres = 0, temp;
 	int i, j;
 	long acc;	
+
 
 
 	/* Reset update states */
@@ -3097,11 +3247,10 @@ int main(void)
 	versionInit();
 	rev = versionRevised();
 	
-	//Scan initial state	
+//Scan initial state	
 	key_state = GetButton();
 	myButtons.value = key_state;
 	
-
 	if(!myButtons.b.StageAddress1Advance)
 	{
 		//if advance switch is pressed start calibration
@@ -3242,11 +3391,64 @@ int main(void)
 				pots_step[j]--;
 			}
 			}
+	}
+
+//	 test123 = ((GPIO_ReadInputData(GPIOB) & 1));
+
+	//printf("GPIOB bit 8: %i \n\n", (GPIO_ReadInputDataBit(GPIOB,2)));
+		//printf("GPIOB: %i \n\n",test123) ;*/
+
+
+		printf("Gpio 0; %i\n\n", foo0);
+		printf("Gpio 1; %i\n\n", foo1);
+
+	// process start-stop for AFG1
+	prev_jackpins1 = jackpins1;
+	jackpins1 = GPIO_ReadInputData(GPIOB);
+	if (!(prev_jackpins1 & 1) && (jackpins1 & 1)) stop1 = EXTCLOCK_WINDOW; // stop jack rising edge
+	if (!(prev_jackpins1 & (1<<8)) && (jackpins1 & (1<<8))) start1 = EXTCLOCK_WINDOW; // start jack rising edge
+
+	//printf ("Process start\n\n");
+	if (stop1 && start1) { // both signals high means external clock
+	  ExtClockProcessor_1();
+	  stop1 = 0;
+	  start1 = 0;
+	  // Aha! Now need to wait until pin goes low before unsticking
+	}
+	else if (stop1) {
+	  if (--stop1 == 0) { // stop1 window timed out
+	    doStop1(); 
+	  }
+	}
+	else if (start1) {
+	  if (--start1 == 0) { // start1 window timed out
+	    doStart1(); 
+	  }
+	}
+	
+		prev_jackpins2 = jackpins2;
+		jackpins2 = GPIO_ReadInputData(GPIOB);
+		if (!(prev_jackpins2 & (1<<1)) && (jackpins2 & (1<<1))) stop2 = EXTCLOCK_WINDOW; // stop jack rising edge
+		if (!(prev_jackpins2 & (1<<6)) && (jackpins2 & (1<<6))) start2 = EXTCLOCK_WINDOW; // start jack rising edge
+		//printf ("Process start\n\n");
+		if (stop2 && start2) { // both signals high means external clock
+		  ExtClockProcessor_2();
+		  stop2 = 0;
+		  start2 = 0;
+		  // Aha! Now need to wait until pin goes low before unsticking
+		}
+		else if (stop2) {
+		  if (--stop2 == 0) { // stop1 window timed out
+		    doStop2();
+		  }
+		}
+		else if (start2) {
+		  if (--start2 == 0) { // start1 window timed out
+		    //doStart2();
+		  }
 		}
 
-
-
-	};
+	};// end main loop
 	
 
 };
