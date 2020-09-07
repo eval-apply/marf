@@ -206,25 +206,12 @@ volatile uint32_t millis;
 #define KEY_TIMER 5 // scan switches every 5ms
 
 #define EXTCLOCK_WINDOW 4
-uint32_t jackpins1 = 0;
-uint32_t prev_jackpins1 = 0;
-uint32_t jackpins2 = 0;
-uint32_t prev_jackpins2 = 0;
+uint32_t jackpins = 0;
+uint32_t prev_jackpins = 0;
 unsigned char start1 = 0;
 unsigned char stop1 = 0; 
 unsigned char start2 = 0;
 unsigned char stop2 = 0;
-int test123;
-
-volatile uint16_t foo0;
-volatile uint16_t foo1;
-volatile uint16_t foo2;
-volatile uint16_t foo3;
-volatile uint16_t foo4;
-volatile uint16_t foo5;
-volatile uint16_t foo6;
-volatile uint16_t foo7;
-volatile uint16_t foo8;
 
 #define JUMP_THRESHOLD 150 // threshold for jumping straight to a new ADC reading rather than slewing
 
@@ -3393,22 +3380,11 @@ int main(void)
 			}
 	}
 
-//	 test123 = ((GPIO_ReadInputData(GPIOB) & 1));
-
-	//printf("GPIOB bit 8: %i \n\n", (GPIO_ReadInputDataBit(GPIOB,2)));
-		//printf("GPIOB: %i \n\n",test123) ;*/
-
-
-		printf("Gpio 0; %i\n\n", foo0);
-		printf("Gpio 1; %i\n\n", foo1);
-
 	// process start-stop for AFG1
-	prev_jackpins1 = jackpins1;
-	jackpins1 = GPIO_ReadInputData(GPIOB);
-	if (!(prev_jackpins1 & 1) && (jackpins1 & 1)) stop1 = EXTCLOCK_WINDOW; // stop jack rising edge
-	if (!(prev_jackpins1 & (1<<8)) && (jackpins1 & (1<<8))) start1 = EXTCLOCK_WINDOW; // start jack rising edge
-
-	//printf ("Process start\n\n");
+	prev_jackpins = jackpins;
+	jackpins = GPIO_ReadInputData(GPIOB);
+	if (!(prev_jackpins & 1) && (jackpins & 1)) stop1 = EXTCLOCK_WINDOW; // stop jack rising edge
+	if (!(prev_jackpins & (1<<8)) && (jackpins & (1<<8))) start1 = EXTCLOCK_WINDOW; // start jack rising edge
 	if (stop1 && start1) { // both signals high means external clock
 	  ExtClockProcessor_1();
 	  stop1 = 0;
@@ -3426,11 +3402,10 @@ int main(void)
 	  }
 	}
 	
-		prev_jackpins2 = jackpins2;
-		jackpins2 = GPIO_ReadInputData(GPIOB);
-		if (!(prev_jackpins2 & (1<<1)) && (jackpins2 & (1<<1))) stop2 = EXTCLOCK_WINDOW; // stop jack rising edge
-		if (!(prev_jackpins2 & (1<<6)) && (jackpins2 & (1<<6))) start2 = EXTCLOCK_WINDOW; // start jack rising edge
-		//printf ("Process start\n\n");
+		prev_jackpins = jackpins;
+		jackpins = GPIO_ReadInputData(GPIOB);
+		if (!(prev_jackpins & (1<<1)) && (jackpins & (1<<1))) stop2 = EXTCLOCK_WINDOW; // stop jack rising edge
+		if (!(prev_jackpins & (1<<6)) && (jackpins & (1<<6))) start2 = EXTCLOCK_WINDOW; // start jack rising edge
 		if (stop2 && start2) { // both signals high means external clock
 		  ExtClockProcessor_2();
 		  stop2 = 0;
@@ -3444,7 +3419,7 @@ int main(void)
 		}
 		else if (start2) {
 		  if (--start2 == 0) { // start1 window timed out
-		    //doStart2();
+		   doStart2();
 		  }
 		}
 
